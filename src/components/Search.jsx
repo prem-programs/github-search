@@ -30,10 +30,11 @@ const SubmitHandler = async (e) => {
 
     if (!response.ok) {
       throw new Error("User not found");
+      
     }
 
     const data = await response.json();
-
+  
     setUser(data);
     setValue("");
 
@@ -85,7 +86,7 @@ const SubmitHandler = async (e) => {
           </label>
         </form>
         <div className='absolute inset-x-0 top-full mt-2'>
-          <Dropdown visible={focused} user = {user}/>
+          <Dropdown visible={focused} user={user} />
         </div>
       </motion.div>
     </div>

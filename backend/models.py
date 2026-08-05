@@ -13,6 +13,7 @@ class Repo(Base):
     topics = Column(String)
     created_at = Column(String ,nullable=False)
     updated_at = Column(String , nullable=False)
+    readme = Column(String)
     owner_id = Column(Integer ,ForeignKey("users.id",ondelete="CASCADE"),nullable=False,index=True)
     
 class User(Base):
@@ -20,8 +21,8 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String , nullable=True)
-    username = Column(String , nullable=False , unique=True)
-    name = Column(String , nullable=False)
+    username = Column(String , unique=True)
+    name = Column(String )
     bio = Column(String, nullable=True)
     location = Column(String, nullable=True)
     public_repos = Column(Integer,nullable=True)

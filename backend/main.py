@@ -4,11 +4,27 @@ from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal,engine
 from models import Repo,User,Base
+import base64
 
 Base.metadata.create_all(bind=engine)
 
-
 app = FastAPI()
+
+async def get_readme(username:str, repo_name):
+    url = f"https://api.github.com/repos/{username}/{repo_name}/readme"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+
+    readme = response.json()
+
+    if "content" not in readme:
+        return None
+
+    
+    decoded_content = base64.b64decode(readme["content"]).decode("utf-8")
+    print(decoded_content)
+    return decoded_content
+
 
 def get_db():
     db = SessionLocal()
@@ -31,7 +47,7 @@ def read_root():
     return {"message": "Hello, World!"}
 
 # getting user info 
-@app.get("/call/{username}")
+@app.get("/github/{username}")
 async def callGithub(username:str , db: Session = Depends(get_db)):
     try:
         url = f"https://api.github.com/users/{username}"
@@ -45,6 +61,11 @@ async def callGithub(username:str , db: Session = Depends(get_db)):
 
     except Exception as e :
         print(e)
+
+    if response.status_code == 403:
+        return {"message":"Not Found"}
+
+
 
     ul = User(
         username = data["login"],
@@ -101,6 +122,9 @@ async def store(username:str , db: Session = Depends(get_db)):
     result = []
     
     for repo in repos:
+
+        repo_readme = await get_readme(username , repo["name"])
+
         Rp = Repo(
             Rid = repo["id"],
             repo_name = repo["name"],
@@ -109,6 +133,7 @@ async def store(username:str , db: Session = Depends(get_db)):
             stars = repo["stargazers_count"],
             forks = repo["forks_count"],
             topics = ",".join(repo["topics"]),
+            readme = repo_readme,
             created_at = repo["created_at"],
             updated_at = repo["updated_at"],
             owner_id = user.id
@@ -131,4 +156,3 @@ async def store(username:str , db: Session = Depends(get_db)):
     db.refresh(Rp)
     return result
          
-    

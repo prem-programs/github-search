@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String,ForeignKey
 from database import Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Repo(Base):
     __tablename__ = "repo"

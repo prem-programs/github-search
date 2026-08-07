@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal,engine
 from models import Repo,User,Base
 import base64
+from services.repo_analyzer import analyse_repo
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,8 +23,9 @@ async def get_readme(username:str, repo_name):
 
     
     decoded_content = base64.b64decode(readme["content"]).decode("utf-8")
-    print(decoded_content)
-    return decoded_content
+    preprocessed_decoded_content = analyse_repo(decoded_content)
+    print(preprocessed_decoded_content)
+    return preprocessed_decoded_content
 
 
 def get_db():
@@ -108,7 +110,7 @@ async def store(username:str , db: Session = Depends(get_db)):
 
     repos = response.json()
 
-
+    # checking if user exists 
     user = db.query(User).filter(
         User.username == repos[0]["owner"]["login"]
     ).first()
@@ -120,39 +122,40 @@ async def store(username:str , db: Session = Depends(get_db)):
         )
 
     result = []
-    
+
     for repo in repos:
-
-        repo_readme = await get_readme(username , repo["name"])
-
-        Rp = Repo(
-            Rid = repo["id"],
-            repo_name = repo["name"],
-            description = repo["description"],
-            languages = repo["language"],
-            stars = repo["stargazers_count"],
-            forks = repo["forks_count"],
-            topics = ",".join(repo["topics"]),
-            readme = repo_readme,
-            created_at = repo["created_at"],
-            updated_at = repo["updated_at"],
-            owner_id = user.id
-            )
-        try: 
-            db.add(Rp)
-        except :
-            raise HTTPException(status_code=422 ,detail="Unprocessable Content")
-        result.append({
-            "repo_name": repo["name"],
-            "description": repo["description"],
-            "language": repo["language"],
-            "topics": repo["topics"],
-            "stars": repo["stargazers_count"],
-            "forks": repo["forks_count"],
-            "updated_at": repo["updated_at"],
-        })
+        if (repo["fork"]==False):
+            repo_readme = await get_readme(username , repo["name"])
+           
+            Rp = Repo(
+                Rid = repo["id"],
+                repo_name = repo["name"],
+                description = repo["description"],
+                languages = repo["language"],
+                stars = repo["stargazers_count"],
+                forks = repo["forks_count"],
+                topics = ",".join(repo["topics"]),
+                readme =  repo_readme,
+                created_at = repo["created_at"],
+                updated_at = repo["updated_at"],
+                owner_id = user.id
+                )
+            try: 
+                db.add(Rp)
+            except :
+                raise HTTPException(status_code=422 ,detail="Unprocessable Content")
+            result.append({
+                "repo_name": repo["name"],
+                "description": repo["description"],
+                "language": repo["language"],
+                "topics": repo["topics"],
+                "stars": repo["stargazers_count"],
+                "forks": repo["forks_count"],
+                "updated_at": repo["updated_at"],
+            })
     
     db.commit()
     db.refresh(Rp)
     return result
-         
+
+

@@ -1,47 +1,41 @@
-# from sqlalchemy.orm import Session
-# from database import SessionLocal,engine
-# from models import Repo,User
-# from main import Depends , get_db
-
 import re
-
-# preprocessing for better 
-
-# Remove code blocks
-#     │
-#     ▼
-# Remove markdown links
-#     │
-#     ▼
-# Remove badges
-#     │
-#     ▼
-# Remove HTML
-#     │
-#     ▼
-# Lowercase
-#     │
-#     ▼
-# Skill extraction
 
 def analyse_repo(text):
 
     # text = db.query(Repo).filter(Repo.Rid== {id}).first()
 
-   text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
-   text = re.sub(r"```.*?```", "", text, flags=re.S)
-   text = re.sub(r"`([^`]*)`", r"\1", text)
-   text = re.sub(r"!\[[^\]]*\]\([^\)]+\)", "", text)
-   text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
-   text = re.sub(r"<[^>]+>", "", text)
-   text = re.sub(r"(?m)^\s{0,3}>\s?", "", text)
-   text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)
-   text = re.sub(r"(?m)^[*\-+]\s+", "", text)
-   text = re.sub(r"(?m)^\d+\.\s+", "", text)
-   text = re.sub(r"\*\*|__|\*|_|~~", "", text)
-   text = re.sub(r"---", "", text)
-   text = re.sub(r"/","",text)
-   text = re.sub(r"[()]","",text)
+    # if the readme contains emoji characters, skip processing
+    emoji_pattern = re.compile(
+        (
+            "["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags
+            u"\U00002702-\U000027B0"  # dingbats
+            u"\U000024C2-\U0001F251"
+            "]+"
+        ),
+        flags=re.UNICODE,
+    )
 
-   return " ".join(text.split())
+    if emoji_pattern.search(text):
+        return None
+
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"!\[[^\]]*\]\([^\)]+\)", "", text)
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"(?m)^\s{0,3}>\s?", "", text)
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)
+    text = re.sub(r"(?m)^[*\-+]\s+", "", text)
+    text = re.sub(r"(?m)^\d+\.\s+", "", text)
+    text = re.sub(r"\*\*|__|\*|_|~~", "", text)
+    text = re.sub(r"---", "", text)
+    text = re.sub(r"/","",text)
+    text = re.sub(r"[()]","",text)
+
+    return " ".join(text.split())
        

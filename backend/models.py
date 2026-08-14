@@ -25,6 +25,8 @@ class repositorySkill(Base):
 
     repo_skill = Column(String, nullable=False, index=True)
     skill_category = Column(String, nullable=False)
+    confidence = Column(Float, nullable=False , default=0.0)
+
     
 class User(Base):
     __tablename__ = "users"
@@ -32,7 +34,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String , nullable=True)
     username = Column(String , unique=True)
-    name = Column(String )
+    name = Column(String)
     bio = Column(String, nullable=True)
     location = Column(String, nullable=True)
     public_repos = Column(Integer,nullable=True)
@@ -46,5 +48,4 @@ class Skills(Base):
     category = Column(String)
     repo_count = Column(Integer, nullable=False, default=0)
     percentage = Column(Float, nullable=False, default=0.0)
-    # confidence = Column(Float, nullable=False, default=0.0
 

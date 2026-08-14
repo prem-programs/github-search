@@ -255,15 +255,19 @@ def extract_repo_skills(
     {language}
     """.lower()
 
-    repo_skills = set()
     skill_categories = {}
+    confidence = 0.0
 
     for alias, canonical in ALIASES.items():
         if contains_keyword(combined_text, alias):
-            repo_skills.add(canonical)
             skill_categories[canonical] = SKILLS.get(canonical, "other")
 
-    return  skill_categories
+        if canonical.lower() in str(topics).lower() or canonical.lower() in str(language).lower() or canonical.lower() in str(readme).lower():
+            confidence += 0.30
+        elif alias in combined_text:
+            confidence += 0.10
+
+    return skill_categories, confidence
 
 
 def build_developer_profile(repositories):
@@ -276,7 +280,7 @@ def build_developer_profile(repositories):
 
     for repo in repositories:
 
-        repo_skills = extract_repo_skills(
+        repo_skills, _ = extract_repo_skills(
             readme=repo.get("readme", ""),
             topics=repo.get("topics", ""),
             description=repo.get("description", ""),
@@ -301,6 +305,22 @@ def build_developer_profile(repositories):
         "skill_categories": skill_categories,
     }
 
+
+def calculate_repo_confidence(
+                    readme: str="",
+                    topics: str="",
+                    description : str="",
+                    language : str = ""
+                ):
+    text = " ".join(str(value or "") for value in (readme, topics, description, language)).lower()
+    confidence = 0.0
+
+    for skill in SKILLS:
+        if contains_keyword(text, skill.lower()):
+            confidence += 0.20
+
+    return round(min(confidence, 1.0), 2)
+    
 
 if __name__ == "__main__":
     sample_result = extract_repo_skills(

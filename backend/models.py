@@ -35,6 +35,7 @@ class User(Base):
     email = Column(String , nullable=True)
     username = Column(String , unique=True)
     name = Column(String)
+    logo = Column(String)
     bio = Column(String, nullable=True)
     location = Column(String, nullable=True)
     public_repos = Column(Integer,nullable=True)

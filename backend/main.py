@@ -69,6 +69,24 @@ def read_root():
 # getting user info 
 @app.get("/github/{username}")
 async def callGithub(username: str, db: Session = Depends(get_db)):
+
+     # Check if user already exists
+    existing_user = db.query(User).filter(User.username == username).first()
+    if existing_user:
+        return {
+                "username": existing_user.username,
+                "name": existing_user.name,
+                "logo":existing_user.logo,
+                "location": existing_user.location,
+                "bio": existing_user.bio,
+                "repo": existing_user.public_repos,
+                "followers": None,
+                "furl": None,
+                "reposL": None,
+                "profile": None,
+            }
+
+
     url = f"https://api.github.com/users/{username}"
     headers = get_github_headers()
     timeout = httpx.Timeout(15.0, connect=10.0)
@@ -87,25 +105,17 @@ async def callGithub(username: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.username == data.get("login")).first()
-    if existing_user:
-        existing_user.name = data.get("name")
-        existing_user.bio = data.get("bio")
-        existing_user.email = data.get("email")
-        existing_user.location = data.get("location")
-        existing_user.public_repos = data.get("public_repos", 0)
-        ul = existing_user
-    else:
-        ul = User(
-            username=data.get("login"),
-            name=data.get("name"),
-            bio=data.get("bio"),
-            email=data.get("email"),
-            location=data.get("location"),
-            public_repos=data.get("public_repos", 0),
-        )
-        db.add(ul)
+
+    ul = User(
+        username=data.get("login"),
+        name=data.get("name"),
+        bio=data.get("bio"),
+        email=data.get("email"),
+        logo = data.get("avatar_url"),
+        location=data.get("location"),
+        public_repos=data.get("public_repos", 0),
+    )
+    db.add(ul)
 
     try:
         db.commit()
@@ -192,6 +202,7 @@ async def store(username:str , db: Session = Depends(get_db)):
             created_at_val = str(repo.get("created_at") or "")
             updated_at_val = str(repo.get("updated_at") or "")
 
+       
             existing_repo = db.query(Repo).filter(Repo.Rid == repo_id).first()
             if existing_repo:
                 existing_repo.repo_name = repo.get("name")

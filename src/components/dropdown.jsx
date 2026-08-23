@@ -37,8 +37,7 @@ function Dropdown({ visible, user }) {
           )}
 
           <div className="flex gap-4 text-xs text-slate-500 font-medium mt-1">
-            <span>Repos: {user.repo ?? 0}</span>
-            <span>Followers: {user.followers ?? 0}</span>
+            <span>Repos: {user.public_repos ?? user.repo ?? 0}</span>
           </div>
         </div>
 

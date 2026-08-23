@@ -2,8 +2,6 @@ import re
 
 def analyse_repo(text):
 
-    # text = db.query(Repo).filter(Repo.Rid== {id}).first()
-
     # if the readme contains emoji characters, skip processing
     emoji_pattern = re.compile(
         (
@@ -20,7 +18,7 @@ def analyse_repo(text):
     )
 
     if emoji_pattern.search(text):
-        return None
+        text = emoji_pattern.sub(" ", text)
 
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
     text = re.sub(r"```.*?```", "", text, flags=re.S)

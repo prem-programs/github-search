@@ -23,32 +23,30 @@ function Search({ focused, onFocusChange }) {
 
     try {
       setLoading(true);
-      const res = await fetch(`https://api.github.com/users/${encodeURIComponent(Value.trim())}`);
+      const res = await fetch(`http://localhost:8000/github/${encodeURIComponent(Value.trim())}`);
       
       if (!res.ok) {
         setUser({
           username: Value.trim(),
           name: Value.trim(),
           logo: `https://github.com/${Value.trim()}.png`,
-          location: "Pune , Maharashtra",
           bio: `Software Engineer specializing in modern web & cloud systems.`,
-          repo: 0,
-          followers: 0,
-          profile: `https://github.com/${Value.trim()}`,
+          location: "Pune , Maharashtra",
+          public_repos: 0,
+          profile_url: `https://github.com/${Value.trim()}`,
+          last_Activity: "Just now",
         });
       } else {
         const data = await res.json();
         setUser({
-          username: data.login,
-          name: data.name || data.login,
-          logo: data.avatar_url,
-          location: data.location || "San Francisco, CA",
+          username: data.username,
+          name: data.name || data.username,
+          logo: data.logo,
           bio: data.bio || "Software Engineer",
-          repo: data.public_repos ?? 42,
-          followers: data.followers ?? 0,
-          furl: data.followers_url,
-          reposL: data.repos_url,
-          profile: data.html_url,
+          location: data.location || "San Francisco, CA",
+          public_repos: data.public_repos ?? data.repo ?? 0,
+          profile_url: data.profile_url || `https://github.com/${data.username}`,
+          last_Activity: data.last_Activity,
         });
       }
 
@@ -60,11 +58,11 @@ function Search({ focused, onFocusChange }) {
         username: Value.trim() || "alexdev",
         name: Value.trim() || "Alex Rivera",
         logo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
-        location: "San Francisco, CA",
         bio: "Senior Backend Engineer building distributed systems, LLM pipelines, and high-performance microservices.",
-        repo: 42,
-        followers: 128,
-        profile: `https://github.com/${Value.trim() || "alexdev"}`,
+        location: "San Francisco, CA",
+        public_repos: 42,
+        profile_url: `https://github.com/${Value.trim() || "alexdev"}`,
+        last_Activity: "4 days ago",
       });
     } finally {
       setLoading(false);

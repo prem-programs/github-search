@@ -1,3 +1,4 @@
+from starlette.convertors import IntegerConvertor
 from sqlalchemy import Column, Integer, String,ForeignKey,Float
 from database import Base
 
@@ -32,13 +33,14 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String , nullable=True)
     username = Column(String , unique=True)
     name = Column(String)
     logo = Column(String)
-    bio = Column(String, nullable=True)
+    bio = Column(String)
     location = Column(String, nullable=True)
     public_repos = Column(Integer,nullable=True)
+    profile_url = Column(String,nullable=False)
+    last_Activity = Column(String, nullable=False)
 
 class Skills(Base):
     __tablename__ = "skills"

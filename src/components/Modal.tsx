@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
-  Search as SearchIcon,
-  Star,
-  GitFork,
   MapPin,
-  FolderGit2,
-  Activity,
-  Layers,
-  ExternalLink,
+  Users,
+  GitFork,
+  Briefcase,
+  Check,
   Code2,
-  Cpu,
-  Sparkles,
+  FileText,
+  GitPullRequest,
+  GitCommit,
+  Star,
+  Flame,
+  MessageSquare,
+  Plus,
   Calendar,
-  ArrowUpRight,
+  Pencil,
+  Folder,
+  Activity,
+  Award,
+  Terminal,
+  Copy,
+  CheckCircle2,
 } from "lucide-react";
 
 interface ModalProps {
@@ -43,112 +51,11 @@ const MODAL_PANEL_VARIANTS = {
   exit: { opacity: 0, scale: 0.96, y: 12, transition: { duration: 0.15 } },
 } as const;
 
-const DEFAULT_DATA = {
-  user: {
-    username: "alexdev",
-    name: "Alex Rivera",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
-    bio: "Senior Backend Engineer building distributed systems, LLM pipelines, and high-performance microservices.",
-    location: "San Francisco, CA",
-    profileUrl: "https://github.com",
-  },
-  stats: {
-    repositories: 42,
-    stars: 128,
-    forks: 35,
-    activeLevel: "High",
-    recentRepos: 14,
-    totalRepos: 20,
-    latestActivity: "4 days ago",
-  },
-  technicalProfile: {
-    primary: "Backend / Python",
-    languagesCount: 5,
-    technologiesCount: 14,
-  },
-  topTechnologies: [
-    { name: "Python", percentage: 72, color: "from-blue-600 to-indigo-600" },
-    { name: "FastAPI", percentage: 60, color: "from-teal-500 to-emerald-600" },
-    { name: "PostgreSQL", percentage: 48, color: "from-sky-500 to-blue-600" },
-    { name: "Docker", percentage: 36, color: "from-cyan-500 to-blue-600" },
-    { name: "React", percentage: 28, color: "from-indigo-500 to-purple-600" },
-  ],
-  technologyBreakdown: {
-    Languages: [
-      { name: "Python", percentage: 72 },
-      { name: "JS", percentage: 48 },
-      { name: "TS", percentage: 32 },
-    ],
-    Backend: [
-      { name: "FastAPI", percentage: 60 },
-      { name: "Django", percentage: 20 },
-      { name: "Node", percentage: 16 },
-    ],
-    Frontend: [
-      { name: "React", percentage: 28 },
-      { name: "Next", percentage: 16 },
-    ],
-  },
-  activity: {
-    recentRepositories: "14 / 20",
-    latestActivity: "4 days ago",
-    bars: [
-      { month: "Nov", count: 8, height: "45%" },
-      { month: "Dec", count: 14, height: "70%" },
-      { month: "Jan", count: 11, height: "55%" },
-      { month: "Feb", count: 18, height: "90%" },
-      { month: "Mar", count: 15, height: "75%" },
-      { month: "Apr", count: 20, height: "100%" },
-    ],
-  },
-  topProjects: [
-    {
-      name: "AI Interviewer",
-      stars: 24,
-      tags: ["Python", "FastAPI", "Docker"],
-      description: "Automated real-time technical voice interviewer with speech recognition and dynamic evaluation.",
-      url: "https://github.com",
-    },
-    {
-      name: "GitHub Analyzer",
-      stars: 12,
-      tags: ["React", "FastAPI"],
-      description: "Profile intelligence dashboard analyzing repositories, developer skills, and activity metrics.",
-      url: "https://github.com",
-    },
-    {
-      name: "ML Project",
-      stars: 8,
-      tags: ["Python", "PyTorch"],
-      description: "Distributed deep learning inference pipeline with automated model quantization.",
-      url: "https://github.com",
-    },
-  ],
-};
 
-export const Modal: React.FC<ModalProps> = ({ onClose, user: propUser }) => {
-  const [hoveredBar, setHoveredBar] = useState<any>(null);
+export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
+  const [copied, setCopied] = useState(false);
 
-  const [currentData, setCurrentData] = useState(() => {
-    if (!propUser) return DEFAULT_DATA;
-    return {
-      ...DEFAULT_DATA,
-      user: {
-        username: propUser.username || DEFAULT_DATA.user.username,
-        name: propUser.name || propUser.username || DEFAULT_DATA.user.name,
-        avatar: propUser.logo || propUser.avatar_url || DEFAULT_DATA.user.avatar,
-        bio: propUser.bio || DEFAULT_DATA.user.bio,
-        location: propUser.location || DEFAULT_DATA.user.location,
-        profileUrl: propUser.profile || propUser.html_url || `https://github.com/${propUser.username || "user"}`,
-      },
-      stats: {
-        ...DEFAULT_DATA.stats,
-        repositories: propUser.repo ?? DEFAULT_DATA.stats.repositories,
-      },
-    };
-  });
-
-  // Handle ESC key to close
+  // Esc key listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -157,7 +64,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user: propUser }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Lock body scroll while modal is open
+  // Lock body scroll
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -166,12 +73,95 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user: propUser }) => {
     };
   }, []);
 
+  
+  
+  
 
+  // Format user dynamic data with rich fallbacks
+  const username = user?.login || user?.username || "github_username";
+  const displayName = user?.name || username;
+  const avatarUrl = user?.avatar_url || user?.logo || user?.avatar || null;
+  const location = user?.location || "Pune, India";
+  const hireableStatus = user?.hireable ? "Open to work" : user?.company || "Open to work";
+  const devScore = user?.public_repos
+    ? Math.min(99, Math.max(65, Math.floor(user.public_repos * 1.4 + 68)))
+    : 84;
+
+  // Generate 182 deterministic heatmap cells for 6 months (26 cols x 7 rows)
+  const heatmapData = useMemo(() => {
+    const levels = [null, "l1", "l1", "l2", "l2", "l3", "l3", "l4"];
+    const seed = username.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+    const result = [];
+    for (let i = 0; i < 182; i++) {
+      const pseudoRandom = (Math.sin(seed + i * 1.5) + 1) / 2;
+      if (pseudoRandom > 0.42) {
+        const levelIdx = Math.floor(pseudoRandom * 7) + 1;
+        result.push(levels[levelIdx] || "l1");
+      } else {
+        result.push(null);
+      }
+    }
+    return result;
+  }, [username]);
+  
+  type Skills={
+    skill:string,
+    percentage:number;
+  }
+  const [skill , setskill] = useState<Skills[]>([]);
+
+  useEffect(() => {
+    async function langData(){
+      const res = await fetch(`http://127.0.0.1:8000/github/${username}/language`)
+      if (!res.ok){
+        try {
+          // extract skills from repos
+          const reposResponse = await fetch(`http://127.0.0.1:8000/github/${username}/repos`);
+          
+          if (!reposResponse.ok) {
+            console.error("Failed to fetch repos");
+            return;
+          }
+
+          // Watingg 500ms for db to commit
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Then fetch the language data
+          const response = await fetch(`http://127.0.0.1:8000/github/${username}/language`);
+
+          if (!response.ok) {
+            console.error("Failed to fetch language data");
+            return;
+          }
+
+          const data: Skills[] = await response.json();
+          setskill(data);
+        } catch (error) {
+          console.error("Error fetching language data:", error);
+        }
+      }
+      else{
+        const data: Skills[] = await res.json();
+        setskill(data);
+      }
+    }
+    langData();
+  },[username]);
+
+
+
+
+  const handleCopyPrompt = () => {
+    const text = `Write Python code to fetch all these GitHub API endpoints for user '${username}' and compute the developer score and commit quality metrics shown in the dashboard.`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   return createPortal(
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-slate-900/40 backdrop-blur-md"
+        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-900/50 backdrop-blur-sm overflow-y-auto"
         variants={MODAL_BACKDROP_VARIANTS}
         initial="initial"
         animate="animate"
@@ -179,361 +169,546 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user: propUser }) => {
         onClick={onClose}
       >
         <motion.div
-          className="relative w-full max-w-3xl bg-white text-slate-900 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.15),0_0_0_1px_rgba(0,0,0,0.06)] overflow-hidden my-auto max-h-[90vh] flex flex-col font-sans border border-slate-200/80"
+          className="relative w-full max-w-4xl bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col border border-slate-200 font-sans"
           variants={MODAL_PANEL_VARIANTS}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Subtle Ambient Radial Highlight */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-gradient-to-b from-blue-500/[0.04] to-transparent pointer-events-none blur-2xl" />
-
-          
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/90 backdrop-blur-md sticky top-0 z-20">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+          {/* Modal Header Bar */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/90 backdrop-blur-md sticky top-0 z-20">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
                 <Code2 className="w-4 h-4" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm sm:text-base text-slate-900 tracking-tight">
-                  GitHub Analyzer
-                </span>
-              
+              <div>
+                <h1 className="font-semibold text-base text-slate-900 tracking-tight flex items-center gap-2">
+                  GitHub Developer Dashboard
+
+                </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
-
-
-
-              <button
-                onClick={onClose}
-                className="group flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-200/70 text-slate-500 hover:text-slate-900 transition-all cursor-pointer"
-                title="Close (Esc)"
-              >
-                <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-500 group-hover:text-slate-800">
-                  ESC
-                </kbd>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+              title="Close (Esc)"
+            >
+              <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-500">
+                ESC
+              </kbd>
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* SCROLLABLE MODAL BODY */}
-          <div className="overflow-y-auto divide-y divide-slate-100 custom-modal-scrollbar">
-           
-            <div className="p-6 bg-gradient-to-b from-slate-50/50 to-transparent">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                <div className="relative group shrink-0">
+          {/* Scrollable Dashboard Body */}
+          <div className="overflow-y-auto p-5 sm:p-6 space-y-5 custom-modal-scrollbar text-slate-800 bg-slate-50/50">
+            {/* 1. Profile Header Top Card */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 p-4 sm:p-5 bg-white border border-slate-200 rounded-xl shadow-xs">
+              <div className="relative shrink-0">
+                {avatarUrl ? (
                   <img
-                    src={currentData.user.avatar}
-                    alt={currentData.user.name}
-                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl border-2 border-slate-200 shadow-md object-cover ring-2 ring-blue-500/10 group-hover:scale-105 transition-transform duration-300"
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-slate-200 shadow-sm ring-4 ring-blue-500/10"
                     onError={(e: any) => {
-                      e.target.src = "https://github.com/github.png";
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
                     }}
                   />
-                  
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                      {currentData.user.name}
-                    </h2>
-                    <span className="text-xs font-mono text-slate-500">
-                      @{currentData.user.username}
-                    </span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed line-clamp-2">
-                    {currentData.user.bio}
-                  </p>
-
-                  <div className="flex items-center gap-4 mt-2.5 text-xs text-slate-500">
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      {currentData.user.location}
-                    </span>
-                    <a
-                      href={currentData.user.profileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline font-medium transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      View Profile
-                    </a>
-                  </div>
+                ) : null}
+                <div
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-100 border-2 border-blue-200 flex items-center justify-center font-bold text-lg sm:text-xl text-blue-600 shrink-0"
+                  style={{ display: avatarUrl ? "none" : "flex" }}
+                >
+                  {username.substring(0, 2).toUpperCase()}
                 </div>
               </div>
 
-              {/* QUICK STATS BAR: Repositories | Stars | Forks | Active */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-slate-100">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-                    <FolderGit2 className="w-4 h-4" />
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="font-bold text-lg sm:text-xl text-slate-900 tracking-tight">
+                  {displayName}
+                  {displayName !== username && (
+                    <span className="text-xs font-normal text-slate-500 ml-2">@{username}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-1.5 text-xs text-slate-600">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> {location}
+                  </span>
+
+                  <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                    <Briefcase className="w-3.5 h-3.5 text-emerald-600" /> {hireableStatus}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-center px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl shrink-0">
+                <div className="text-2xl font-bold text-blue-600 font-mono tracking-tight">
+                  {devScore}
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium">Dev score</div>
+              </div>
+            </div>
+
+            {/* 2. Badges Earned */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1.5 font-medium">
+                <Check className="w-3.5 h-3.5" /> Consistent committer
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-700 flex items-center gap-1.5 font-medium">
+                <Code2 className="w-3.5 h-3.5" /> Polyglot (5 langs)
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-md bg-purple-50 border border-purple-200 text-purple-700 flex items-center gap-1.5 font-medium">
+                <Users className="w-3.5 h-3.5" /> Active collaborator
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-1.5 font-medium">
+                <FileText className="w-3.5 h-3.5" /> Docs writer
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center gap-1.5 font-medium">
+                <GitPullRequest className="w-3.5 h-3.5" /> High PR merge rate
+              </span>
+            </div>
+
+            {/* 3. Core Metrics Section */}
+            <div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <GitCommit className="w-3.5 h-3.5 text-blue-600" /> Commits / mo
                   </div>
-                  <div>
-                    <div className="text-base sm:text-lg font-bold text-slate-900 font-mono tabular-nums leading-tight">
-                      {currentData.stats.repositories}
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium">Repositories</div>
-                  </div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">127</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">avg last 6 months</div>
                 </div>
 
-                
-
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
-                    <GitFork className="w-4 h-4" />
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <GitPullRequest className="w-3.5 h-3.5 text-purple-600" /> PR merge rate
                   </div>
-                  <div>
-                    <div className="text-base sm:text-lg font-bold text-slate-900 font-mono tabular-nums leading-tight">
-                      {currentData.stats.forks}
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium">Forks</div>
-                  </div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">91%</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">42 of 46 merged</div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                    <Activity className="w-4 h-4" />
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500" /> Stars earned
                   </div>
-                  <div>
-                    <div className="text-base sm:text-lg font-bold text-emerald-600 leading-tight">
-                      {currentData.stats.activeLevel}
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium">Active Status</div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">1.4k</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">across 18 repos</div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-orange-500" /> Streak
                   </div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">34d</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">current run</div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-cyan-600" /> Reviews given
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">68</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">last 90 days</div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
+                  <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5 text-emerald-600" /> Lines added
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">48k</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">net positive delta</div>
                 </div>
               </div>
             </div>
 
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* TECHNICAL PROFILE                                          */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Cpu className="w-3.5 h-3.5 text-blue-600" />
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Technical Profile
-                </h3>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* 4. Row 2: Heatmap + Language Depth */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Heatmap Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="text-[11px] text-slate-500 font-medium">Primary Focus</div>
-                  <div className="text-base font-semibold text-slate-900 mt-0.5 flex items-center gap-2">
-                    <span className="inline-block w-2 h-2 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)]" />
-                    {currentData.technicalProfile.primary}
+                  <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    Contribution heatmap — last 6 months
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 font-mono shadow-2xs">
-                    Languages: <span className="font-bold text-slate-900">{currentData.technicalProfile.languagesCount}</span>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 font-mono shadow-2xs">
-                    Technologies: <span className="font-bold text-slate-900">{currentData.technicalProfile.technologiesCount}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <div className="grid grid-cols-[repeat(26,minmax(0,1fr))] gap-1">
+                    {heatmapData.map((lvl, idx) => {
+                      let bgStyle = { backgroundColor: "#f1f5f9" }; // surface-0 default
+                      if (lvl === "l1") bgStyle = { backgroundColor: "#c6efce" };
+                      if (lvl === "l2") bgStyle = { backgroundColor: "#76d193" };
+                      if (lvl === "l3") bgStyle = { backgroundColor: "#2ea84f" };
+                      if (lvl === "l4") bgStyle = { backgroundColor: "#1a6e32" };
 
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* TOP TECHNOLOGIES                                           */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Top Technologies
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {currentData.topTechnologies.map((tech, idx) => (
-                  <div key={tech.name} className="flex items-center gap-3 text-xs sm:text-sm group">
-                    <span className="w-24 font-medium text-slate-800 truncate">
-                      {tech.name}
-                    </span>
-
-                    <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/80">
-                      <motion.div
-                        className={`h-full rounded-full bg-gradient-to-r ${tech.color}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${tech.percentage}%` }}
-                        transition={{ ...SPRING_TRANSITION, delay: idx * 0.08 }}
-                      />
-                    </div>
-
-                    <span className="w-10 text-right font-mono font-bold text-slate-700 tabular-nums text-xs">
-                      {tech.percentage}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* TECHNOLOGY BREAKDOWN                                       */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Layers className="w-3.5 h-3.5 text-purple-600" />
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Technology Breakdown
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {Object.entries(currentData.technologyBreakdown).map(([category, skills]) => (
-                  <div
-                    key={category}
-                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70 hover:border-slate-300 transition-colors"
-                  >
-                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2.5 pb-1.5 border-b border-slate-200 flex items-center justify-between">
-                      <span>{category}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {skills.length} items
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {skills.map((skill) => (
+                      return (
                         <div
-                          key={skill.name}
-                          className="flex items-center justify-between text-xs text-slate-700 font-medium"
-                        >
-                          <span>{skill.name}</span>
-                          <span className="font-mono text-slate-500 font-semibold text-[11px] tabular-nums">
-                            {skill.percentage}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* ACTIVITY                                                   */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Activity
-                </h3>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 text-xs sm:text-sm">
-                  <div>
-                    <span className="text-slate-500">Recent repositories: </span>
-                    <span className="font-bold text-slate-900 font-mono">
-                      {currentData.activity.recentRepositories}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Latest activity: </span>
-                    <span className="font-bold text-emerald-600 font-mono">
-                      {currentData.activity.latestActivity}
-                    </span>
+                          key={idx}
+                          className="h-2.5 rounded-[2px] border border-slate-200/50 transition-colors"
+                          style={bgStyle}
+                          title={`Day ${idx + 1}`}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Activity Velocity Chart */}
-                <div className="pt-2 border-t border-slate-200/80">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
-                    <span>Repository Activity Velocity (Last 6 Months)</span>
-                    {hoveredBar && (
-                      <span className="text-emerald-700 font-mono font-medium animate-fadeIn">
-                        {hoveredBar.month}: {hoveredBar.count} updates
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100">
+                  <span>Less</span>
+                  <div className="w-2.5 h-2.5 rounded-[2px] bg-slate-100 border border-slate-200" />
+                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#c6efce" }} />
+                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#76d193" }} />
+                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#2ea84f" }} />
+                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#1a6e32" }} />
+                  <span>More</span>
+                </div>
+            
+              </div>
+              {/* Language Depth Card */}
+              
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Code2 className="w-4 h-4 text-slate-500" />
+                  Language Used
+                </div>
+                  
+
+                {[...skill]
+                .sort((a,b)=> parseInt(b.percentage) - parseInt(a.percentage))
+                .map((item)=>(
+                  <div key={item.skill} className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="w-16 font-medium text-slate-600">{item.skill}</span>
+                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-[#3572A5]" style={{ width: item.percentage }} />
+                      </div>
+                      <span className="w-8 text-right font-mono text-[14px] text-slate-500">{parseInt(item.percentage)}%</span>
+                    </div>
+                  </div>
+                ))}
+                
+                
+              </div>
+            </div>
+
+            {/* 5. Row 3: PR Breakdown + Commit Quality */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* PR Breakdown Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <GitPullRequest className="w-4 h-4 text-slate-500" />
+                  PR breakdown 
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center py-2 bg-slate-50 border border-slate-200/80 rounded-lg mb-3">
+                  <div>
+                    <div className="text-xl font-bold text-emerald-600 font-mono">42</div>
+                    <div className="text-[10px] text-slate-500">merged</div>
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-blue-600 font-mono">4</div>
+                    <div className="text-[10px] text-slate-500">open</div>
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-slate-600 font-mono">2</div>
+                    <div className="text-[10px] text-slate-500">closed</div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-700">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Avg review cycles</span>
+                    <strong className="font-mono text-slate-900">1.4</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Avg time to merge</span>
+                    <strong className="font-mono text-slate-900">18h</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Reviews on others' PRs</span>
+                    <strong className="font-mono text-slate-900">68</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Commit Quality Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-slate-500" />
+                  Commit message quality
+                </div>
+
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-600">Descriptive messages</span>
+                      <span className="font-mono text-[11px] text-slate-500">82%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: "82%" }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-600">Uses conventional commits</span>
+                      <span className="font-mono text-[11px] text-slate-500">71%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: "71%" }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-600">Avg message length</span>
+                      <span className="font-mono text-[11px] text-slate-500">52 chars</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: "65%" }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-600">References issues/PRs</span>
+                      <span className="font-mono text-[11px] text-slate-500">48%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: "48%" }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  Above average commit hygiene
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Top Repositories */}
+            <div>
+
+
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-slate-500" />
+                  Owned repos by impact
+                </div>
+
+                <div className="divide-y divide-slate-100 text-xs">
+                  <div className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <div className="font-semibold text-slate-900">ml-pipeline-toolkit</div>
+                      <div className="text-[11px] text-slate-500">Python · Last pushed 2d ago</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-500" /> 834
                       </span>
-                    )}
+                      <span className="flex items-center gap-1">
+                        <GitFork className="w-3 h-3 text-slate-400" /> 112
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-slate-400" /> 8 contribs
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="h-20 flex items-end justify-between gap-2 sm:gap-3 px-1 pt-2">
-                    {currentData.activity.bars.map((bar, idx) => (
-                      <div
-                        key={bar.month}
-                        onMouseEnter={() => setHoveredBar(bar)}
-                        onMouseLeave={() => setHoveredBar(null)}
-                        className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group cursor-pointer"
-                      >
-                        <div className="relative w-full flex justify-center items-end h-full">
-                          <motion.div
-                            className="w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-blue-600 to-teal-500 opacity-80 group-hover:opacity-100 group-hover:scale-y-105 transition-all origin-bottom shadow-xs"
-                            style={{ height: bar.height }}
-                            initial={{ height: 0 }}
-                            animate={{ height: bar.height }}
-                            transition={{ ...SPRING_TRANSITION, delay: idx * 0.06 }}
-                          />
-                        </div>
-                        <span className="text-[10px] font-mono text-slate-500 group-hover:text-slate-900 transition-colors font-medium">
-                          {bar.month}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <div className="font-semibold text-slate-900">go-microservices-starter</div>
+                      <div className="text-[11px] text-slate-500">Go · Last pushed 5d ago</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-500" /> 312
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork className="w-3 h-3 text-slate-400" /> 58
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-slate-400" /> 3 contribs
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <div className="font-semibold text-slate-900">ts-form-validator</div>
+                      <div className="text-[11px] text-slate-500">TypeScript · Last pushed 12d ago</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-500" /> 198
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork className="w-3 h-3 text-slate-400" /> 31
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-slate-400" /> solo
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="py-2.5 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <div className="font-semibold text-slate-900">rust-cli-boilerplate</div>
+                      <div className="text-[11px] text-slate-500">Rust · Last pushed 1mo ago</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-500" /> 76
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork className="w-3 h-3 text-slate-400" /> 14
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-slate-400" /> solo
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ────────────────────────────────────────────────────────── */}
-            {/* TOP PROJECTS                                               */}
-            {/* ────────────────────────────────────────────────────────── */}
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <FolderGit2 className="w-3.5 h-3.5 text-indigo-600" />
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Top Projects
-                </h3>
-              </div>
+            {/* 7. Row 4: Recent Activity + Collaboration Signals */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Recent Activity Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
 
-              <div className="space-y-2.5">
-                {currentData.topProjects.map((project) => (
-                  <div
-                    key={project.name}
-                    className="p-3.5 rounded-xl bg-slate-50/60 hover:bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all duration-200 group"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <a
-                        href={project.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-sm text-blue-600 group-hover:text-blue-700 flex items-center gap-1 transition-colors"
-                      >
-                        {project.name}
-                        <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
 
-                      <div className="flex items-center gap-2.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-amber-700 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 shadow-2xs">
-                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                          {project.stars}
-                        </span>
-
-                        <div className="flex flex-wrap gap-1">
-                          {project.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[10px] font-mono px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200/80 shadow-2xs"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                <div className="space-y-3 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-slate-600">
+                        Merged PR <strong className="text-slate-900 font-medium">#84 — add batch inference</strong> in ml-pipeline-toolkit
+                      </span>
                     </div>
-
-                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                      {project.description}
-                    </p>
+                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">2h ago</span>
                   </div>
-                ))}
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-slate-600">
+                        Reviewed <strong className="text-slate-900 font-medium">3 commits</strong> on go-microservices-starter
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">5h ago</span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-slate-600">
+                        Opened issue <strong className="text-slate-900 font-medium">#121 — memory leak on large batches</strong>
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">1d ago</span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-slate-600">
+                        Pushed <strong className="text-slate-900 font-medium">6 commits</strong> to ts-form-validator
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">2d ago</span>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-slate-600">
+                        Reviewed PR by <strong className="text-slate-900 font-medium">@ananya_dev</strong> in forked repo
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">3d ago</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Collaboration Signals Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-slate-500" />
+                    Collaboration signals
+                  </div>
+
+                  <div className="space-y-2 text-xs divide-y divide-slate-100">
+                    <div className="flex justify-between pt-1">
+                      <span className="text-slate-600">Team repos (multi-contributor)</span>
+                      <strong className="font-mono text-slate-900">7 of 18</strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">PRs opened in others' repos</span>
+                      <strong className="font-mono text-slate-900">14</strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Issue comments (non-author)</span>
+                      <strong className="font-mono text-slate-900">38</strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Forks of others' work</span>
+                      <strong className="font-mono text-slate-900">22</strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Repos with wiki / discussions</span>
+                      <strong className="font-mono text-slate-900">5</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
+                  <Award className="w-4 h-4 text-purple-600 shrink-0" />
+                  Strong open-source citizen profile
+                </div>
+              </div>
+            </div>
+
+            {/* 8. API Endpoints Section */}
+            <div className="bg-slate-100/80 border border-slate-200 rounded-xl p-4">
+              <div className="text-xs font-semibold text-slate-600 mb-2.5 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-slate-500" />
+                GitHub API endpoints powering this dashboard
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /users/{username}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /users/{username}/repos
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /users/{username}/events
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/commits
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/pulls
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/languages
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/stats/contributors
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/stats/participation
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
+                  GET /repos/{`{owner}`}/{`{repo}`}/contents/README.md
+                </span>
+              </div>
+            </div>
+
+            {/* 9. Action Button */}
+            <div className="pt-1 flex justify-end">
             </div>
           </div>
         </motion.div>

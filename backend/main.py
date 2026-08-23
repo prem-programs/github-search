@@ -1,14 +1,20 @@
+from services import skill_extractor
+from services.skill_extractor import SKILLS
+from sqlalchemy.orm import bulk_persistence
+from fastapi import exceptions
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI,HTTPException,Depends
 import httpx
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,join
 from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal,engine
 from models import Repo,User,Base,repositorySkill,Skills
 import base64
 from services.repo_analyzer import analyse_repo
 from services.skill_extractor import extract_repo_skills,calculate_repo_confidence,build_developer_profile
+import asyncio
+
 
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -25,6 +31,8 @@ def get_github_headers():
     if GITHUB_TOKEN:
         headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
     return headers
+
+
 
 async def get_readme(username: str, repo_name: str):
     url = f"https://api.github.com/repos/{username}/{repo_name}/readme"
@@ -62,6 +70,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def user_skills(username:str, db: Session):
+    user = db.query(User).filter(User.username == username).first()
+
+    if not user:
+        return []
+    
+    skills = db.query(Skills).filter(Skills.profile_id == user.id).all()
+    return skills
+
+
+#Routes
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
@@ -77,13 +97,11 @@ async def callGithub(username: str, db: Session = Depends(get_db)):
                 "username": existing_user.username,
                 "name": existing_user.name,
                 "logo":existing_user.logo,
+                "bio" : existing_user.bio,
                 "location": existing_user.location,
-                "bio": existing_user.bio,
                 "repo": existing_user.public_repos,
-                "followers": None,
-                "furl": None,
-                "reposL": None,
-                "profile": None,
+                "profile_url" : existing_user.profile_url,
+                "last_Activity" : existing_user.last_Activity
             }
 
 
@@ -109,11 +127,12 @@ async def callGithub(username: str, db: Session = Depends(get_db)):
     ul = User(
         username=data.get("login"),
         name=data.get("name"),
-        bio=data.get("bio"),
-        email=data.get("email"),
+        bio = data.get("bio"),
         logo = data.get("avatar_url"),
         location=data.get("location"),
         public_repos=data.get("public_repos", 0),
+        profile_url = data.get("html_url"),
+        last_Activity = data.get("updated_at")
     )
     db.add(ul)
 
@@ -128,13 +147,11 @@ async def callGithub(username: str, db: Session = Depends(get_db)):
         "username": data.get("login"),
         "name": data.get("name"),
         "logo": data.get("avatar_url"),
-        "location": data.get("location"),
         "bio": data.get("bio"),
-        "repo": data.get("public_repos", 0),
-        "followers": data.get("followers", 0),
-        "furl": data.get("followers_url"),
-        "reposL": data.get("repos_url"),
-        "profile": data.get("html_url"),
+        "location":data.get("location"),
+       "public_repos":data.get("public_repos", 0),
+        "profile_url" : data.get("html_url"),
+        "last_Activity" : data.get("updated_at")
     }
 
 @app.get("/github/{username}/repos")
@@ -261,3 +278,78 @@ async def store(username:str , db: Session = Depends(get_db)):
     return result
 
 
+@app.get("/github/{username}/orgs")
+async def org(username:str , db:Session = Depends(get_db)):
+    count = 0
+    url = f"https://api.github.com/users/{username}/orgs"
+    headers = get_github_headers()
+    timeout = httpx.Timeout(15.0, connect=10.0)
+    try: 
+        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+            response = await client.get(url)
+            
+    except (httpx.ConnectTimeout, httpx.TimeoutException):
+        raise HTTPException(status_code=504, detail="Connection to GitHub API timed out. Please check your network connection.")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach GitHub API: {e}")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="user not found")
+
+    datas = response.json()
+
+    for data in datas :
+        count +=1
+
+    return count
+    
+
+
+#PRs and all
+@app.get("/github/{username}/contribution")
+async def contribution(username:str , db:Session = Depends(get_db)):
+    urls = [
+        f"https://api.github.com/users/{username}/events",
+        f"https://api.github.com/search/issues?q=author:{username}+type:pr"
+    ]
+     
+    headers = get_github_headers()
+    timeout = httpx.Timeout(15.0, connect=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+            tasks = [client.get(url) for url in urls]
+            responses = await asyncio.gather(*tasks) # making task to run simultaneously
+    except (httpx.ConnectTimeout, httpx.TimeoutException):
+        raise HTTPException(status_code=504, detail="Connection to GitHub API timed out. Please check your network connection.")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach GitHub API: {e}")
+
+    for response in responses:
+        if (response).status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="user not found")
+
+    for response in responses:
+        return (f"Status: {response.status_code}, Data: {response.json()}")
+
+#endpoint for getting most language used 
+@app.get("/github/{username}/language")
+def langPercent(username:str , db:Session = Depends(get_db)):
+
+    langP =( db.query(User,Skills)
+    .join(Skills,User.id == Skills.profile_id)
+    .filter(User.username == username).all()
+    )
+    if langP:
+        return [
+            {
+                "skill":skill.skills,
+                "percentage":skill.percentage
+            }
+            for user, skill in langP
+        ]
+    else:
+        return HTTPException(status_code=404 , detail="Not found in db")
+
+
+# commit message analyser
+@app.get 

@@ -73,9 +73,9 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     };
   }, []);
 
-  
-  
-  
+
+
+
 
   // Format user dynamic data with rich fallbacks
   const username = user?.login || user?.username || "github_username";
@@ -86,6 +86,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
   const devScore = user?.public_repos
     ? Math.min(99, Math.max(65, Math.floor(user.public_repos * 1.4 + 68)))
     : 84;
+  // const repoName = repo?.name ||
 
   // Generate 182 deterministic heatmap cells for 6 months (26 cols x 7 rows)
   const heatmapData = useMemo(() => {
@@ -103,51 +104,58 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     }
     return result;
   }, [username]);
-  
-  type Skills={
-    skill:string,
-    percentage:number;
+
+  type Skills = {
+    skill: string,
+    percentage: number;
   }
-  const [skill , setskill] = useState<Skills[]>([]);
+  type Repos = {
+    repoName: string,
+    lang: string,
+    lastUpdated: string
+  }
+
+
+
+  const [skill, setskill] = useState<Skills[]>([]);
 
   useEffect(() => {
-    async function langData(){
-      const res = await fetch(`http://127.0.0.1:8000/github/${username}/language`)
-      if (!res.ok){
-        try {
-          // extract skills from repos
-          const reposResponse = await fetch(`http://127.0.0.1:8000/github/${username}/repos`);
-          
+    async function langData() {
+      try {
+        const res = await fetch(`http://localhost:8000/github/${username}/language`);
+        if (!res.ok) {
+          const reposResponse = await fetch(`http://localhost:8000/github/${username}/repos`);
+
           if (!reposResponse.ok) {
             console.error("Failed to fetch repos");
             return;
           }
 
-          // Watingg 500ms for db to commit
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          // Then fetch the language data
-          const response = await fetch(`http://127.0.0.1:8000/github/${username}/language`);
+          const response = await fetch(`http://localhost:8000/github/${username}/language`);
 
           if (!response.ok) {
             console.error("Failed to fetch language data");
             return;
           }
 
-          const data: Skills[] = await response.json();
-          setskill(data);
-        } catch (error) {
-          console.error("Error fetching language data:", error);
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            setskill(data);
+          }
+        } else {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setskill(data);
+          }
         }
-      }
-      else{
-        const data: Skills[] = await res.json();
-        setskill(data);
+      } catch (error) {
+        console.error("Error fetching language data:", error);
       }
     }
-    langData();
-  },[username]);
-
+    if (username) {
+      langData();
+    }
+  }, [username]);
 
 
 
@@ -360,32 +368,36 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                   <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#1a6e32" }} />
                   <span>More</span>
                 </div>
-            
+
               </div>
               {/* Language Depth Card */}
-              
+
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
                 <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
                   <Code2 className="w-4 h-4 text-slate-500" />
                   Language Used
                 </div>
-                  
 
-                {[...skill]
-                .sort((a,b)=> parseInt(b.percentage) - parseInt(a.percentage))
-                .map((item)=>(
-                  <div key={item.skill} className="space-y-2.5">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="w-16 font-medium text-slate-600">{item.skill}</span>
-                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-[#3572A5]" style={{ width: item.percentage }} />
+
+                {skill && skill.length > 0 ? (
+                  [...skill]
+                    .sort((a, b) => Number(b.percentage) - Number(a.percentage))
+                    .map((item) => (
+                      <div key={item.skill} className="space-y-2.5 my-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="w-16 font-medium text-slate-600 truncate" title={item.skill}>{item.skill}</span>
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#3572A5]" style={{ width: `${item.percentage}%` }} />
+                          </div>
+                          <span className="w-8 text-right font-mono text-[14px] text-slate-500">{parseInt(String(item.percentage))}%</span>
+                        </div>
                       </div>
-                      <span className="w-8 text-right font-mono text-[14px] text-slate-500">{parseInt(item.percentage)}%</span>
-                    </div>
-                  </div>
-                ))}
-                
-                
+                    ))
+                ) : (
+                  <div className="text-xs text-slate-400 py-2 font-medium">No language breakdown available yet.</div>
+                )}
+
+
               </div>
             </div>
 
@@ -395,7 +407,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
                 <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
                   <GitPullRequest className="w-4 h-4 text-slate-500" />
-                  PR breakdown 
+                  PR breakdown
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center py-2 bg-slate-50 border border-slate-200/80 rounded-lg mb-3">
@@ -498,7 +510,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                 <div className="divide-y divide-slate-100 text-xs">
                   <div className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div>
-                      <div className="font-semibold text-slate-900">ml-pipeline-toolkit</div>
+                      <div className="font-semibold text-slate-900">python-ai-toolkit</div>
                       <div className="text-[11px] text-slate-500">Python · Last pushed 2d ago</div>
                     </div>
                     <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">

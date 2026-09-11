@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI,HTTPException,Depends
 import httpx
+from sqlalchemy import func
 from sqlalchemy.orm import Session,join
 from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal,engine
@@ -72,7 +73,7 @@ app.add_middleware(
 
 
 def user_skills(username:str, db: Session):
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(func.lower(User.username) == username.lower()).first()
 
     if not user:
         return []
@@ -91,7 +92,7 @@ def read_root():
 async def callGithub(username: str, db: Session = Depends(get_db)):
 
      # Check if user already exists
-    existing_user = db.query(User).filter(User.username == username).first()
+    existing_user = db.query(User).filter(func.lower(User.username) == username.lower()).first()
     if existing_user:
         return {
                 "username": existing_user.username,
@@ -176,8 +177,10 @@ async def store(username:str , db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No repositories found for user")
 
     # checking if user exists
-    owner_login = repos[0].get("owner", {}).get("login")
-    user = db.query(User).filter(User.username == owner_login).first()
+    owner_login = repos[0].get("owner", {}).get("login", "")
+    user = db.query(User).filter(func.lower(User.username) == username.lower()).first()
+    if not user:
+        user = db.query(User).filter(func.lower(User.username) == owner_login.lower()).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -337,7 +340,7 @@ def langPercent(username:str , db:Session = Depends(get_db)):
 
     langP =( db.query(User,Skills)
     .join(Skills,User.id == Skills.profile_id)
-    .filter(User.username == username).all()
+    .filter(func.lower(User.username) == username.lower()).all()
     )
     if langP:
         return [
@@ -348,8 +351,6 @@ def langPercent(username:str , db:Session = Depends(get_db)):
             for user, skill in langP
         ]
     else:
-        return HTTPException(status_code=404 , detail="Not found in db")
+        raise HTTPException(status_code=404 , detail="Not found in db")
 
 
-# commit message analyser
-@app.get 

@@ -16,6 +16,7 @@ class Repo(Base):
     created_at = Column(String ,nullable=False)
     updated_at = Column(String , nullable=False)
     readme = Column(String)
+    stars = Column(Integer)
 
 class repositorySkill(Base):
     __tablename__ = "repository_skills"

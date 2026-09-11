@@ -7,6 +7,7 @@ SKILLS = {
     "TypeScript": "language",
     "Java": "language",
     "C++": "language",
+    "C" :"language",
     "C#": "language",
     "Go": "language",
     "Rust": "language",
@@ -98,6 +99,8 @@ ALIASES = {
 
     "c++": "C++",
     "cpp": "C++",
+
+    "c" :"C",
 
     "c#": "C#",
     "csharp": "C#",

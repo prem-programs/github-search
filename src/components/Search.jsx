@@ -9,6 +9,7 @@ function Search({ focused, onFocusChange }) {
   const wrapperRef = useRef(null);
   const [Value, setValue] = useState('');
   const [loading, setLoading] = useState(false)
+  // const [repo, setRepo] = useState("")
 
   const handleBlur = (e) => {
     const next = e.relatedTarget;
@@ -24,7 +25,6 @@ function Search({ focused, onFocusChange }) {
     try {
       setLoading(true);
       const res = await fetch(`http://localhost:8000/github/${encodeURIComponent(Value.trim())}`);
-      
       if (!res.ok) {
         setUser({
           username: Value.trim(),
@@ -68,6 +68,26 @@ function Search({ focused, onFocusChange }) {
       setLoading(false);
     }
   };
+  // const clickHandler = async(e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const res = await fetch(`http://localhost:8000/github/${encodeURIComponent(Value.trim())}/language`);
+
+  //     if (!res.ok) {
+  //       return;
+  //     }
+  //     else {
+  //       const data = await res.json();
+  //       setRepo({
+  //         repoName: data.repo_name,
+  //         language: data.language,
+  //       });
+  //     }
+  //   }
+  //   catch (e) {
+  //     return e
+  //   }
+
 
   return (
     <div className='rounded-3xl w-full flex justify-center'>

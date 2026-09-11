@@ -15,7 +15,7 @@ import base64
 from services.repo_analyzer import analyse_repo
 from services.skill_extractor import extract_repo_skills,calculate_repo_confidence,build_developer_profile
 import asyncio
-
+from services.best4 import best4
 
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -353,4 +353,26 @@ def langPercent(username:str , db:Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=404 , detail="Not found in db")
 
+@app.get("/github/{username}/impact")
+def sort_repo(username:str,db:Session = Depends(get_db)):
+    user = db.query(User).filter(
+        func.lower(User.username) == username.lower()
+    ).first()
 
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    repos = db.query(Repo).filter(Repo.owner_id == user.id).all()
+
+    repo_dicts = [
+        {
+            "name": repo.repo_name,
+            "stargazers_count": 0,  # Not stored in your Repo model
+            "forks_count": repo.forks,
+            "size": 0,  # Not stored
+            "readme": repo.readme,
+        }
+        for repo in repos
+    ]
+
+    best_repos = best4(repo_dicts)
+    return {"best4":best_repos}

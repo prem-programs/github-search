@@ -506,7 +506,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                   <Folder className="w-4 h-4 text-slate-500" />
                   Owned repos by impact
                 </div>
-
+                
                 <div className="divide-y divide-slate-100 text-xs">
                   <div className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div>

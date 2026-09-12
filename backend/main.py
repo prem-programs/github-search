@@ -232,6 +232,7 @@ async def store(username:str , db: Session = Depends(get_db)):
                 existing_repo.topics = ",".join(repo.get("topics", []))
                 existing_repo.readme = repo_readme
                 existing_repo.updated_at = updated_at_val
+                existing_repo.stars = repo.get("stargazers_count", 0)
             else:
                 Rp = Repo(
                     Rid=repo_id,
@@ -244,6 +245,7 @@ async def store(username:str , db: Session = Depends(get_db)):
                     created_at=created_at_val,
                     updated_at=updated_at_val,
                     owner_id=user.id,
+                    stars=repo.get("stargazers_count", 0),
                 )
                 db.add(Rp)
 
@@ -366,13 +368,15 @@ def sort_repo(username:str,db:Session = Depends(get_db)):
     repo_dicts = [
         {
             "name": repo.repo_name,
-            "stargazers_count": 0,  # Not stored in your Repo model
-            "forks_count": repo.forks,
-            "size": 0,  # Not stored
+            "stargazers_count": repo.stars or 0,
+            "forks_count": repo.forks or 0,
+            "size": 0,
+            "language": repo.languages,
+            "updated_at": repo.updated_at,
             "readme": repo.readme,
         }
         for repo in repos
     ]
 
     best_repos = best4(repo_dicts)
-    return {"best4":best_repos}
+    return {"best4": best_repos}

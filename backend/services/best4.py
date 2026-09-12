@@ -1,7 +1,8 @@
+#This module will get best of 4 repos till author made
 import math
 
+
 def calculate_repo_score(repo:dict)->float:
-    parameters = ['stars','professional','forks','loc','depolyed']
     # readme present >deployed>stars>forks>loc
     score = 0
     

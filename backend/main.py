@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal,engine
 from models import Repo,User,Base,repositorySkill,Skills
 import base64
+from datetime import datetime,timezone
 from services.repo_analyzer import analyse_repo
 from services.skill_extractor import extract_repo_skills,calculate_repo_confidence,build_developer_profile
 import asyncio
@@ -380,3 +381,89 @@ def sort_repo(username:str,db:Session = Depends(get_db)):
 
     best_repos = best4(repo_dicts)
     return {"best4": best_repos}
+
+
+def format_relative_time(date_str: str) -> str:
+    created = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    diff = now - created
+    seconds = int(diff.total_seconds())
+    if seconds < 3600:
+        return f"{max(1, seconds // 60)}m ago"
+    elif seconds < 86400:
+        return f"{seconds // 3600}h ago"
+    else:
+        return f"{seconds // 86400}d ago"
+
+# recent _activities 
+@app.get("/github/{username}/activity")
+async def get_user_activity(username: str):
+    url = f"https://api.github.com/users/{username}/events/public?per_page=15"
+    headers = get_github_headers()
+    
+    async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
+        res = await client.get(url)
+        if res.status_code != 200:
+            return []
+        events = res.json()
+    activities = []
+    for event in events:
+        etype = event.get("type")
+        payload = event.get("payload", {})
+        repo_name = event.get("repo", {}).get("name", "").split("/")[-1]
+        time_ago = format_relative_time(event.get("created_at"))
+        
+        # 1. Merged or Opened PR
+        if etype == "PullRequestEvent":
+            action = payload.get("action")
+            pr = payload.get("pull_request", {})
+            pr_num = pr.get("number")
+            pr_title = pr.get("title")
+            
+            if action == "closed" and pr.get("merged"):
+                activities.append({
+                    "type": "pr_merged",
+                    "color": "emerald",
+                    "text": f"Merged PR #{pr_num} — {pr_title} in {repo_name}",
+                    "time": time_ago
+                })
+            elif action == "opened":
+                activities.append({
+                    "type": "pr_opened",
+                    "color": "purple",
+                    "text": f"Opened PR #{pr_num} — {pr_title} in {repo_name}",
+                    "time": time_ago
+                })
+        # 2. Pushed Commits
+        elif etype == "PushEvent":
+            count = len(payload.get("commits", [])) or payload.get("size", 1)
+            activities.append({
+                "type": "push",
+                "color": "emerald",
+                "text": f"Pushed {count} commit{'s' if count > 1 else ''} to {repo_name}",
+                "time": time_ago
+            })
+        # 3. PR Reviews
+        elif etype == "PullRequestReviewEvent":
+            pr_author = payload.get("pull_request", {}).get("user", {}).get("login", "")
+            activities.append({
+                "type": "review",
+                "color": "blue",
+                "text": f"Reviewed PR by @{pr_author} in {repo_name}",
+                "time": time_ago
+            })
+        # 4. Opened / Closed Issue
+        elif etype == "IssuesEvent":
+            action = payload.get("action")
+            issue = payload.get("issue", {})
+            issue_num = issue.get("number")
+            issue_title = issue.get("title")
+            activities.append({
+                "type": "issue",
+                "color": "blue",
+                "text": f"{action.capitalize()} issue #{issue_num} — {issue_title} in {repo_name}",
+                "time": time_ago
+            })
+        if len(activities) >= 5:
+            break
+    return activities

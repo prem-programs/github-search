@@ -86,7 +86,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
   const devScore = user?.public_repos
     ? Math.min(99, Math.max(65, Math.floor(user.public_repos * 1.4 + 68)))
     : 84;
-  // const repoName = repo?.name ||
+
 
   // Generate 182 deterministic heatmap cells for 6 months (26 cols x 7 rows)
   const heatmapData = useMemo(() => {
@@ -122,9 +122,16 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     language?: string;
     updated_at?: string;
   };
+  type Activity = {
+    type: string,
+    color: string,
+    text: string,
+    time: string
+  };
 
   const [skill, setskill] = useState<Skills[]>([]);
   const [irepo, setirepo] = useState<iRepo[]>([]);
+  const [Activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -136,9 +143,10 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
           console.error("Failed to sync repos:", e);
         }
 
-        const [resLang, resImpact] = await Promise.all([
+        const [resLang, resImpact, resActivity] = await Promise.all([
           fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/language`),
           fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/impact`),
+          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/activity`),
         ]);
 
         // Handle language data
@@ -160,6 +168,16 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
           }
         } else {
           console.error("Failed to fetch impact data");
+        }
+
+        // Handle activity data
+        if (resActivity.ok) {
+          const data = await resActivity.json();
+          if (Array.isArray(data)) {
+            setActivities(data);
+          }
+        } else {
+          console.error("Failed to fetch activity data");
         }
       } catch (error) {
         console.error("Error fetching modal data:", error);
@@ -513,145 +531,111 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
 
             {/* 6. Top Repositories */}
             <div>
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-              <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
-                <Folder className="w-4 h-4 text-slate-500" />
-                Owned repos by impact
-              </div>
-              {irepo && irepo.length > 0 ? (
-                <div className="divide-y divide-slate-100 text-xs">
-                  {irepo.map((item, idx) => (
-                    <div key={item.name || idx} className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <div>
-                        <div className="font-semibold text-slate-900">{item.name}</div>
-                        <div className="text-[11px] text-slate-500">
-                          {item.language || "Code"} · {item.updated_at ? `Updated ${new Date(item.updated_at).toLocaleDateString()}` : "Active"}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-slate-500" />
+                  Owned repos by impact
+                </div>
+                {irepo && irepo.length > 0 ? (
+                  <div className="divide-y divide-slate-100 text-xs">
+                    {irepo.map((item, idx) => (
+                      <div key={item.name || idx} className="py-2.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <div>
+                          <div className="font-semibold text-slate-900">{item.name}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {item.language || "Code"} · {item.updated_at ? `Updated ${new Date(item.updated_at).toLocaleDateString()}` : "Active"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                          <span className="flex items-center gap-1" title="Stars">
+                            <Star className="w-3 h-3 text-amber-500" /> {item.stargazers_count ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1" title="Forks">
+                            <GitFork className="w-3 h-3 text-slate-400" /> {item.forks_count ?? 0}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
-                        <span className="flex items-center gap-1" title="Stars">
-                          <Star className="w-3 h-3 text-amber-500" /> {item.stargazers_count ?? 0}
-                        </span>
-                        <span className="flex items-center gap-1" title="Forks">
-                          <GitFork className="w-3 h-3 text-slate-400" /> {item.forks_count ?? 0}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 py-2">No repositories yet</div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400 py-2">No repositories yet</div>
+                )}
+              </div>
             </div>
 
             {/* 7. Row 4: Recent Activity + Collaboration Signals */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Recent Activity Card */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-slate-500" />
+                  Recent activity
+                </div>
 
                 <div className="space-y-3 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                    <div className="flex-1">
-                      <span className="text-slate-600">
-                        Merged PR <strong className="text-slate-900 font-medium">#84 — add batch inference</strong> in ml-pipeline-toolkit
-                      </span>
+                  {Activities.map((act, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <span className={`w-2 h-2 rounded-full mt-1 shrink-0 ${act.color === 'emerald' ? 'bg-emerald-500' :
+                          act.color === 'purple' ? 'bg-purple-500' : 'bg-blue-500'
+                        }`} />
+                      <div className="flex-1 text-slate-600">{act.text}</div>
+                      <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{act.time}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">2h ago</span>
-                  </div>
+                  ))}
+                  {Activities.length === 0 && (
+                    <div className="text-xs text-slate-400 py-1">No recent activity</div>
+                  )}
+                </div>
+              </div>
 
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
-                    <div className="flex-1">
-                      <span className="text-slate-600">
-                        Reviewed <strong className="text-slate-900 font-medium">3 commits</strong> on go-microservices-starter
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">5h ago</span>
-                  </div>
+            {/* Collaboration Signals Card */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-500" />
+                  Collaboration signals
+                </div>
 
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
-                    <div className="flex-1">
-                      <span className="text-slate-600">
-                        Opened issue <strong className="text-slate-900 font-medium">#121 — memory leak on large batches</strong>
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">1d ago</span>
+                <div className="space-y-2 text-xs divide-y divide-slate-100">
+                  <div className="flex justify-between pt-1">
+                    <span className="text-slate-600">Team repos (multi-contributor)</span>
+                    <strong className="font-mono text-slate-900">7 of 18</strong>
                   </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                    <div className="flex-1">
-                      <span className="text-slate-600">
-                        Pushed <strong className="text-slate-900 font-medium">6 commits</strong> to ts-form-validator
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">2d ago</span>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-slate-600">PRs opened in others' repos</span>
+                    <strong className="font-mono text-slate-900">14</strong>
                   </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1 shrink-0" />
-                    <div className="flex-1">
-                      <span className="text-slate-600">
-                        Reviewed PR by <strong className="text-slate-900 font-medium">@ananya_dev</strong> in forked repo
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">3d ago</span>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-slate-600">Issue comments (non-author)</span>
+                    <strong className="font-mono text-slate-900">38</strong>
+                  </div>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-slate-600">Forks of others' work</span>
+                    <strong className="font-mono text-slate-900">22</strong>
+                  </div>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-slate-600">Repos with wiki / discussions</span>
+                    <strong className="font-mono text-slate-900">5</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Collaboration Signals Card */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-slate-500" />
-                    Collaboration signals
-                  </div>
-
-                  <div className="space-y-2 text-xs divide-y divide-slate-100">
-                    <div className="flex justify-between pt-1">
-                      <span className="text-slate-600">Team repos (multi-contributor)</span>
-                      <strong className="font-mono text-slate-900">7 of 18</strong>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-slate-600">PRs opened in others' repos</span>
-                      <strong className="font-mono text-slate-900">14</strong>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-slate-600">Issue comments (non-author)</span>
-                      <strong className="font-mono text-slate-900">38</strong>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-slate-600">Forks of others' work</span>
-                      <strong className="font-mono text-slate-900">22</strong>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                      <span className="text-slate-600">Repos with wiki / discussions</span>
-                      <strong className="font-mono text-slate-900">5</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 p-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
-                  <Award className="w-4 h-4 text-purple-600 shrink-0" />
-                  Strong open-source citizen profile
-                </div>
+              <div className="mt-3 p-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
+                <Award className="w-4 h-4 text-purple-600 shrink-0" />
+                Strong open-source citizen profile
               </div>
-            </div>
-
-            {/* 9. Action Button */}
-            <div className="pt-1 flex justify-end">
             </div>
           </div>
-        </motion.div>
+
+          {/* 9. Action Button */}
+          <div className="pt-1 flex justify-end">
+          </div>
+        </div>
       </motion.div>
-    </AnimatePresence>,
-    document.body
-  );
+    </motion.div>
+  </AnimatePresence>,
+  document.body
+);
 };
 
 export default Modal;

@@ -17,6 +17,7 @@ from services.repo_analyzer import analyse_repo
 from services.skill_extractor import extract_repo_skills,calculate_repo_confidence,build_developer_profile
 import asyncio
 from services.best4 import best4
+from services.contributions import get_user_contributions
 
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -311,31 +312,15 @@ async def org(username:str , db:Session = Depends(get_db)):
     
 
 
-#PRs and all
+# Contributions calendar and streak metrics
+@app.get("/github/{username}/contributions")
 @app.get("/github/{username}/contribution")
-async def contribution(username:str , db:Session = Depends(get_db)):
-    urls = [
-        f"https://api.github.com/users/{username}/events",
-        f"https://api.github.com/search/issues?q=author:{username}+type:pr"
-    ]
-     
-    headers = get_github_headers()
-    timeout = httpx.Timeout(15.0, connect=10.0)
+async def get_contributions_data(username: str):
     try:
-        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
-            tasks = [client.get(url) for url in urls]
-            responses = await asyncio.gather(*tasks) # making task to run simultaneously
-    except (httpx.ConnectTimeout, httpx.TimeoutException):
-        raise HTTPException(status_code=504, detail="Connection to GitHub API timed out. Please check your network connection.")
+        data = await get_user_contributions(username, GITHUB_TOKEN)
+        return data
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to reach GitHub API: {e}")
-
-    for response in responses:
-        if (response).status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="user not found")
-
-    for response in responses:
-        return (f"Status: {response.status_code}, Data: {response.json()}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch contributions: {e}")
 
 #endpoint for getting most language used 
 @app.get("/github/{username}/language")

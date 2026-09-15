@@ -88,53 +88,92 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     : 84;
 
 
-  // Generate 182 deterministic heatmap cells for 6 months (26 cols x 7 rows)
-  const heatmapData = useMemo(() => {
-    const levels = [null, "l1", "l1", "l2", "l2", "l3", "l3", "l4"];
-    const seed = username.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-    const result = [];
-    for (let i = 0; i < 182; i++) {
-      const pseudoRandom = (Math.sin(seed + i * 1.5) + 1) / 2;
-      if (pseudoRandom > 0.42) {
-        const levelIdx = Math.floor(pseudoRandom * 7) + 1;
-        result.push(levels[levelIdx] || "l1");
-      } else {
-        result.push(null);
-      }
-    }
-    return result;
-  }, [username]);
-
-  type Skills = {
+  interface Skills {
     skill: string;
     percentage: number;
-  };
-  type Repos = {
-    repoName: string;
-    lang: string;
-    lastUpdated: string;
-  };
-  type iRepo = {
+  }
+  interface iRepo {
     name: string;
     stargazers_count?: number;
     forks_count?: number;
     size?: number;
     language?: string;
     updated_at?: string;
-  };
-  type Activity = {
-    type: string,
-    color: string,
-    text: string,
-    time: string
-  };
+  }
+  interface Activity {
+    type: string;
+    color: string;
+    text: string;
+    time: string;
+  }
+  interface ContributionDay {
+    date: string;
+    count: number;
+    level: number;
+  }
+  interface ContributionWeek {
+    days: ContributionDay[];
+  }
+  interface ContributionData {
+    totalContributions: number;
+    currentStreak: number;
+    longestStreak: number;
+    weeks: ContributionWeek[];
+  }
 
   const [skill, setskill] = useState<Skills[]>([]);
   const [irepo, setirepo] = useState<iRepo[]>([]);
   const [Activities, setActivities] = useState<Activity[]>([]);
+  const [contributions, setContributions] = useState<ContributionData | null>(null);
+  const [loadingContributions, setLoadingContributions] = useState<boolean>(true);
+  const [hoveredDay, setHoveredDay] = useState<{ date: string; count: number } | null>(null);
+
+  const getContributionColor = (level: number) => {
+    switch (level) {
+      case 1:
+        return "#9be9a8";
+      case 2:
+        return "#40c463";
+      case 3:
+        return "#30a14e";
+      case 4:
+        return "#216e39";
+      default:
+        return "#ebedf0";
+    }
+  };
+
+  const formatContributionDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Last 26 weeks for 6 months view
+  const displayedWeeks = useMemo(() => {
+    if (!contributions?.weeks || contributions.weeks.length === 0) {
+      return Array.from({ length: 26 }, () => ({
+        days: Array.from({ length: 7 }, () => ({ date: "", count: 0, level: 0 })),
+      }));
+    }
+    return contributions.weeks.slice(-26);
+  }, [contributions]);
+
+  const visibleContributionsCount = useMemo(() => {
+    if (!contributions?.weeks) return 0;
+    return displayedWeeks.reduce(
+      (acc, w) => acc + w.days.reduce((dAcc, d) => dAcc + (d.count || 0), 0),
+      0
+    );
+  }, [displayedWeeks, contributions]);
 
   useEffect(() => {
     async function fetchData() {
+      setLoadingContributions(true);
       try {
         // Ensure repos and skills are synced in backend
         try {
@@ -143,10 +182,11 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
           console.error("Failed to sync repos:", e);
         }
 
-        const [resLang, resImpact, resActivity] = await Promise.all([
+        const [resLang, resImpact, resActivity, resContrib] = await Promise.all([
           fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/language`),
           fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/impact`),
           fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/activity`),
+          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/contributions`),
         ]);
 
         // Handle language data
@@ -159,7 +199,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
           console.error("Failed to fetch language data");
         }
 
-        // Handle impact/repos data (extracts best4 array or array directly)
+        // Handle impact/repos data
         if (resImpact.ok) {
           const idata = await resImpact.json();
           const repos = Array.isArray(idata) ? idata : idata?.best4;
@@ -179,8 +219,20 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
         } else {
           console.error("Failed to fetch activity data");
         }
+
+        // Handle contributions data
+        if (resContrib.ok) {
+          const cdata = await resContrib.json();
+          if (cdata && Array.isArray(cdata.weeks)) {
+            setContributions(cdata);
+          }
+        } else {
+          console.error("Failed to fetch contribution data");
+        }
       } catch (error) {
         console.error("Error fetching modal data:", error);
+      } finally {
+        setLoadingContributions(false);
       }
     }
 
@@ -315,8 +367,12 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                   <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
                     <GitCommit className="w-3.5 h-3.5 text-blue-600" /> Commits / mo
                   </div>
-                  <div className="text-xl font-bold text-slate-900 font-mono">127</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">avg last 6 months</div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">
+                    {contributions?.totalContributions !== undefined
+                      ? Math.round(contributions.totalContributions / 12)
+                      : "..."}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">avg past 12 months</div>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
@@ -339,8 +395,14 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                   <div className="text-xs text-slate-600 mb-1 flex items-center gap-1.5">
                     <Flame className="w-3.5 h-3.5 text-orange-500" /> Streak
                   </div>
-                  <div className="text-xl font-bold text-slate-900 font-mono">34d</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">current run</div>
+                  <div className="text-xl font-bold text-slate-900 font-mono">
+                    {contributions?.currentStreak !== undefined ? `${contributions.currentStreak}d` : "0d"}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {contributions?.longestStreak !== undefined
+                      ? `max ${contributions.longestStreak}d streak`
+                      : "current run"}
+                  </div>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs">
@@ -366,39 +428,73 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
               {/* Heatmap Card */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-500" />
-                    Contribution heatmap — last 6 months
+                  <div className="text-xs font-semibold text-slate-700 mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-500" />
+                      <span>Contribution heatmap — last 6 months</span>
+                    </div>
+                    <span className="text-[11px] font-normal text-slate-500 font-mono">
+                      {loadingContributions
+                        ? "Loading..."
+                        : `${visibleContributionsCount} contribution${visibleContributionsCount === 1 ? "" : "s"}`}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-[repeat(26,minmax(0,1fr))] gap-1">
-                    {heatmapData.map((lvl, idx) => {
-                      let bgStyle = { backgroundColor: "#f1f5f9" }; // surface-0 default
-                      if (lvl === "l1") bgStyle = { backgroundColor: "#c6efce" };
-                      if (lvl === "l2") bgStyle = { backgroundColor: "#76d193" };
-                      if (lvl === "l3") bgStyle = { backgroundColor: "#2ea84f" };
-                      if (lvl === "l4") bgStyle = { backgroundColor: "#1a6e32" };
+                  {/* Heatmap Grid (Weeks as columns, Days as rows) */}
+                  <div className="flex items-center gap-[3px] overflow-x-auto py-1">
+                    {displayedWeeks.map((week, wIdx) => (
+                      <div key={wIdx} className="flex flex-col gap-[3px] flex-1 min-w-[7px]">
+                        {week.days.map((day, dIdx) => (
+                          <div
+                            key={day.date || `${wIdx}-${dIdx}`}
+                            className={`w-full aspect-square rounded-[2px] border border-slate-200/40 transition-transform hover:scale-125 hover:z-10 cursor-pointer ${
+                              loadingContributions ? "animate-pulse" : ""
+                            }`}
+                            style={{ backgroundColor: getContributionColor(day.level) }}
+                            onMouseEnter={() => day.date && setHoveredDay({ date: day.date, count: day.count })}
+                            onMouseLeave={() => setHoveredDay(null)}
+                            title={
+                              day.date
+                                ? `${day.count === 0 ? "No" : day.count} contribution${
+                                    day.count === 1 ? "" : "s"
+                                  } on ${formatContributionDate(day.date)}`
+                                : undefined
+                            }
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
 
-                      return (
-                        <div
-                          key={idx}
-                          className="h-2.5 rounded-[2px] border border-slate-200/50 transition-colors"
-                          style={bgStyle}
-                          title={`Day ${idx + 1}`}
-                        />
-                      );
-                    })}
+                  {/* Hover status text */}
+                  <div className="min-h-[16px] mt-1 text-[10px] text-slate-500 text-right">
+                    {hoveredDay ? (
+                      <span>
+                        <strong className="text-slate-700">{hoveredDay.count}</strong> contribution{hoveredDay.count === 1 ? "" : "s"} on{" "}
+                        {formatContributionDate(hoveredDay.date)}
+                      </span>
+                    ) : (
+                      <span>Hover over a cell for details</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100">
-                  <span>Less</span>
-                  <div className="w-2.5 h-2.5 rounded-[2px] bg-slate-100 border border-slate-200" />
-                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#c6efce" }} />
-                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#76d193" }} />
-                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#2ea84f" }} />
-                  <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#1a6e32" }} />
-                  <span>More</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <span>Less</span>
+                    <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#ebedf0" }} />
+                    <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#9be9a8" }} />
+                    <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#40c463" }} />
+                    <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#30a14e" }} />
+                    <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: "#216e39" }} />
+                    <span>More</span>
+                  </div>
+
+                  {contributions && (
+                    <div className="text-[10px] text-slate-400">
+                      Total year: <strong className="text-slate-600">{contributions.totalContributions}</strong>
+                    </div>
+                  )}
                 </div>
 
               </div>

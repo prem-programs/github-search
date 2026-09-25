@@ -43,10 +43,12 @@ function Search({ focused, onFocusChange }) {
           name: data.name || data.username,
           logo: data.logo,
           bio: data.bio || "Software Engineer",
-          location: data.location || "San Francisco, CA",
+          location: data.location || "Pune, Maharashtra",
           public_repos: data.public_repos ?? data.repo ?? 0,
           profile_url: data.profile_url || `https://github.com/${data.username}`,
           last_Activity: data.last_Activity,
+          hireable: data.hireable,
+          company: data.company,
         });
       }
 

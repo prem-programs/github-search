@@ -18,7 +18,9 @@ from services.skill_extractor import extract_repo_skills,calculate_repo_confiden
 import asyncio
 from services.best4 import best4
 from services.contributions import get_user_contributions
+from services.analytics import fetch_developer_analytics
 
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
@@ -151,10 +153,12 @@ async def callGithub(username: str, db: Session = Depends(get_db)):
         "name": data.get("name"),
         "logo": data.get("avatar_url"),
         "bio": data.get("bio"),
-        "location":data.get("location"),
-       "public_repos":data.get("public_repos", 0),
-        "profile_url" : data.get("html_url"),
-        "last_Activity" : data.get("updated_at")
+        "location": data.get("location"),
+        "public_repos": data.get("public_repos", 0),
+        "profile_url": data.get("html_url"),
+        "last_Activity": data.get("updated_at"),
+        "hireable": data.get("hireable"),
+        "company": data.get("company"),
     }
 
 @app.get("/github/{username}/repos")
@@ -452,3 +456,31 @@ async def get_user_activity(username: str):
         if len(activities) >= 5:
             break
     return activities
+
+
+# Developer Analytics, PR Breakdown & Collaboration Endpoints
+@app.get("/github/{username}/analytics")
+@app.get("/github/{username}/metrics")
+@app.get("/github/{username}/dashboard")
+async def get_analytics(username: str):
+    try:
+        data = await fetch_developer_analytics(username, GITHUB_TOKEN)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analytics: {e}")
+
+@app.get("/github/{username}/pr-breakdown")
+async def get_pr_breakdown(username: str):
+    try:
+        data = await fetch_developer_analytics(username, GITHUB_TOKEN)
+        return data.get("prBreakdown", {})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch PR breakdown: {e}")
+
+@app.get("/github/{username}/collaboration")
+async def get_collaboration(username: str):
+    try:
+        data = await fetch_developer_analytics(username, GITHUB_TOKEN)
+        return data.get("collaborationSignals", {})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch collaboration signals: {e}")

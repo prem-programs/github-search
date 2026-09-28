@@ -122,11 +122,12 @@ function Search({ focused, onFocusChange }) {
 
               <button
                 type="submit"
+                disabled={loading}
                 onMouseDown={() => onFocusChange(true)}
-                className='ml-2 w-15 h-15 border-0 bg-slate-900 text-white rounded-2xl hover:bg-slate-700 transition-colors duration-200 shadow-lg relative'
+                className="ml-2 w-15 h-15 border-0 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 active:scale-95 disabled:opacity-80 disabled:cursor-not-allowed transition-all duration-200 shadow-lg relative flex items-center justify-center cursor-pointer"
+                title={loading ? "Searching..." : "Search"}
               >
-                {loading ? (<Loader />) : (<span>&gt;</span>)}
-
+                {loading ? <Loader size="sm" inline={true} /> : <span className="font-bold text-xl select-none leading-none">&gt;</span>}
               </button>
             </div>
           </label>

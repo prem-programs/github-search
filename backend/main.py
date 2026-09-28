@@ -38,7 +38,6 @@ def get_github_headers():
     return headers
 
 
-
 async def get_readme(username: str, repo_name: str):
     url = f"https://api.github.com/repos/{username}/{repo_name}/readme"
     headers = get_github_headers()

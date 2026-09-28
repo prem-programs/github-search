@@ -24,6 +24,7 @@ import {
   Terminal,
   Copy,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 interface ModalProps {
@@ -173,6 +174,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
   const [skill, setskill] = useState<Skills[]>([]);
   const [irepo, setirepo] = useState<iRepo[]>([]);
   const [Activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Format user dynamic data with rich fallbacks
   const username = user?.login || user?.username || "github_username";
@@ -201,87 +203,89 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     return result;
   }, [username]);
 
-  useEffect(() => {
-    async function fetchData() {
+  const fetchData = async () => {
+    if (!username || username === "github_username") return;
+    try {
+      setLoading(true);
+      // Ensure repos and skills are synced in backend
       try {
-        // Ensure repos and skills are synced in backend
-        try {
-          await fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/repos`);
-        } catch (e) {
-          console.error("Failed to sync repos:", e);
-        }
-
-        const [resLang, resImpact, resActivity, resAnalytics, resContrib] = await Promise.all([
-          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/language`).catch(() => null),
-          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/impact`).catch(() => null),
-          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/activity`).catch(() => null),
-          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/analytics`).catch(() => null),
-          fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/contributions`).catch(() => null),
-        ]);
-
-        // Handle analytics data (PR breakdown, collaboration, core metrics, dev score)
-        if (resAnalytics && resAnalytics.ok) {
-          const aData = await resAnalytics.json();
-          if (aData && aData.prBreakdown) {
-            setAnalytics(aData);
-          }
-        }
-
-        // Handle contributions & heatmap data
-        if (resContrib && resContrib.ok) {
-          const cData = await resContrib.json();
-          const weeks = cData.weeks || [];
-          if (Array.isArray(weeks) && weeks.length > 0) {
-            const last26Weeks = weeks.slice(-26);
-            const cells: HeatmapDay[] = [];
-            last26Weeks.forEach((w: any) => {
-              (w.days || []).forEach((d: any) => {
-                let lvl: string | null = null;
-                if (d.level === 1) lvl = "l1";
-                else if (d.level === 2) lvl = "l2";
-                else if (d.level === 3) lvl = "l3";
-                else if (d.level >= 4) lvl = "l4";
-                cells.push({ date: d.date, count: d.count || 0, level: lvl });
-              });
-            });
-            if (cells.length > 0) {
-              setRealHeatmap(cells);
-            }
-          }
-        }
-
-        // Handle language data
-        if (resLang && resLang.ok) {
-          const data = await resLang.json();
-          if (Array.isArray(data)) {
-            setskill(data);
-          }
-        }
-
-        // Handle impact/repos data (extracts best4 array or array directly)
-        if (resImpact && resImpact.ok) {
-          const idata = await resImpact.json();
-          const repos = Array.isArray(idata) ? idata : idata?.best4;
-          if (Array.isArray(repos)) {
-            setirepo(repos);
-          }
-        }
-
-        // Handle activity data
-        if (resActivity && resActivity.ok) {
-          const data = await resActivity.json();
-          if (Array.isArray(data)) {
-            setActivities(data);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching modal data:", error);
+        await fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/repos`);
+      } catch (e) {
+        console.error("Failed to sync repos:", e);
       }
-    }
 
-    if (username && username !== "github_username") {
-      fetchData();
+      const [resLang, resImpact, resActivity, resAnalytics, resContrib] = await Promise.all([
+        fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/language`).catch(() => null),
+        fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/impact`).catch(() => null),
+        fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/activity`).catch(() => null),
+        fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/analytics`).catch(() => null),
+        fetch(`http://localhost:8000/github/${encodeURIComponent(username)}/contributions`).catch(() => null),
+      ]);
+
+      // Handle analytics data (PR breakdown, collaboration, core metrics, dev score)
+      if (resAnalytics && resAnalytics.ok) {
+        const aData = await resAnalytics.json();
+        if (aData && aData.prBreakdown) {
+          setAnalytics(aData);
+        }
+      }
+
+      // Handle contributions & heatmap data
+      if (resContrib && resContrib.ok) {
+        const cData = await resContrib.json();
+        const weeks = cData.weeks || [];
+        if (Array.isArray(weeks) && weeks.length > 0) {
+          const last26Weeks = weeks.slice(-26);
+          const cells: HeatmapDay[] = [];
+          last26Weeks.forEach((w: any) => {
+            (w.days || []).forEach((d: any) => {
+              let lvl: string | null = null;
+              if (d.level === 1) lvl = "l1";
+              else if (d.level === 2) lvl = "l2";
+              else if (d.level === 3) lvl = "l3";
+              else if (d.level >= 4) lvl = "l4";
+              cells.push({ date: d.date, count: d.count || 0, level: lvl });
+            });
+          });
+          if (cells.length > 0) {
+            setRealHeatmap(cells);
+          }
+        }
+      }
+
+      // Handle language data
+      if (resLang && resLang.ok) {
+        const data = await resLang.json();
+        if (Array.isArray(data)) {
+          setskill(data);
+        }
+      }
+
+      // Handle impact/repos data (extracts best4 array or array directly)
+      if (resImpact && resImpact.ok) {
+        const idata = await resImpact.json();
+        const repos = Array.isArray(idata) ? idata : idata?.best4;
+        if (Array.isArray(repos)) {
+          setirepo(repos);
+        }
+      }
+
+      // Handle activity data
+      if (resActivity && resActivity.ok) {
+        const data = await resActivity.json();
+        if (Array.isArray(data)) {
+          setActivities(data);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching modal data:", error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [username]);
 
 
@@ -322,16 +326,30 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
-              title="Close (Esc)"
-            >
-              <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-500">
-                ESC
-              </kbd>
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => fetchData()}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100/80 active:bg-slate-200 text-slate-700 text-xs font-semibold shadow-2xs hover:shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                title="Fetch latest GitHub data and metrics"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-600"}`} />
+                <span>{loading ? "Syncing..." : "Sync Data"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+                title="Close (Esc)"
+              >
+                <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-500">
+                  ESC
+                </kbd>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Scrollable Dashboard Body */}

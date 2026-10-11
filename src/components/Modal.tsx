@@ -161,6 +161,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
     size?: number;
     language?: string;
     updated_at?: string;
+    impact_score?: number;
   };
   type Activity = {
     type: string;
@@ -315,11 +316,11 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
           {/* Modal Header Bar */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/90 backdrop-blur-md sticky top-0 z-20">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+              <div className="w-8 h-8 rounded-lg  bg-blue-300 flex items-center justify-center text-white shadow-sm">
                 <Code2 className="w-4 h-4" />
               </div>
               <div>
-                <h1 className="font-semibold text-base text-slate-900 tracking-tight flex items-center gap-2">
+                <h1 className="font-semibold text-base text-blue-600 tracking-tight flex items-center gap-2">
                   GitHub Developer Dashboard
 
                 </h1>
@@ -734,6 +735,11 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 text-slate-600 text-[11px] font-mono">
+                          {item.impact_score !== undefined && (
+                            <span className="flex items-center gap-1 text-indigo-600 font-semibold bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px]" title="Impact Score">
+                              Score {item.impact_score}
+                            </span>
+                          )}
                           <span className="flex items-center gap-1" title="Stars">
                             <Star className="w-3 h-3 text-amber-500" /> {item.stargazers_count ?? 0}
                           </span>
@@ -763,7 +769,7 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                   {Activities.map((act, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <span className={`w-2 h-2 rounded-full mt-1 shrink-0 ${act.color === 'emerald' ? 'bg-emerald-500' :
-                          act.color === 'purple' ? 'bg-purple-500' : 'bg-blue-500'
+                        act.color === 'purple' ? 'bg-purple-500' : 'bg-blue-500'
                         }`} />
                       <div className="flex-1 text-slate-600">{act.text}</div>
                       <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{act.time}</span>
@@ -775,64 +781,64 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                 </div>
               </div>
 
-            {/* Collaboration Signals Card */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-slate-500" />
-                  Collaboration signals
+              {/* Collaboration Signals Card */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-slate-500" />
+                    Collaboration signals
+                  </div>
+
+                  <div className="space-y-2 text-xs divide-y divide-slate-100">
+                    <div className="flex justify-between pt-1">
+                      <span className="text-slate-600">Team repos (multi-contributor)</span>
+                      <strong className="font-mono text-slate-900">
+                        {analytics?.collaborationSignals?.teamRepos ?? "7 of 18"}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">PRs opened in others' repos</span>
+                      <strong className="font-mono text-slate-900">
+                        {analytics?.collaborationSignals?.prsInOthersRepos ?? 14}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Issue comments (non-author)</span>
+                      <strong className="font-mono text-slate-900">
+                        {analytics?.collaborationSignals?.issueComments ?? 38}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Forks of others' work</span>
+                      <strong className="font-mono text-slate-900">
+                        {analytics?.collaborationSignals?.forksOfOthers ?? 22}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between pt-2">
+                      <span className="text-slate-600">Repos with wiki / discussions</span>
+                      <strong className="font-mono text-slate-900">
+                        {analytics?.collaborationSignals?.wikiOrDiscussions ?? 5}
+                      </strong>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2 text-xs divide-y divide-slate-100">
-                  <div className="flex justify-between pt-1">
-                    <span className="text-slate-600">Team repos (multi-contributor)</span>
-                    <strong className="font-mono text-slate-900">
-                      {analytics?.collaborationSignals?.teamRepos ?? "7 of 18"}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between pt-2">
-                    <span className="text-slate-600">PRs opened in others' repos</span>
-                    <strong className="font-mono text-slate-900">
-                      {analytics?.collaborationSignals?.prsInOthersRepos ?? 14}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between pt-2">
-                    <span className="text-slate-600">Issue comments (non-author)</span>
-                    <strong className="font-mono text-slate-900">
-                      {analytics?.collaborationSignals?.issueComments ?? 38}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between pt-2">
-                    <span className="text-slate-600">Forks of others' work</span>
-                    <strong className="font-mono text-slate-900">
-                      {analytics?.collaborationSignals?.forksOfOthers ?? 22}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between pt-2">
-                    <span className="text-slate-600">Repos with wiki / discussions</span>
-                    <strong className="font-mono text-slate-900">
-                      {analytics?.collaborationSignals?.wikiOrDiscussions ?? 5}
-                    </strong>
-                  </div>
+                <div className="mt-3 p-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
+                  <Award className="w-4 h-4 text-purple-600 shrink-0" />
+                  {analytics?.collaborationSignals?.badgeTitle ?? "Strong open-source citizen profile"}
                 </div>
-              </div>
-
-              <div className="mt-3 p-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs flex items-center gap-1.5 font-medium">
-                <Award className="w-4 h-4 text-purple-600 shrink-0" />
-                {analytics?.collaborationSignals?.badgeTitle ?? "Strong open-source citizen profile"}
               </div>
             </div>
-          </div>
 
-          {/* 9. Action Button */}
-          <div className="pt-1 flex justify-end">
+            {/* 9. Action Button */}
+            <div className="pt-1 flex justify-end">
+            </div>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
-  </AnimatePresence>,
-  document.body
-);
+    </AnimatePresence>,
+    document.body
+  );
 };
 
 export default Modal;

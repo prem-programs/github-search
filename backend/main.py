@@ -238,6 +238,8 @@ async def store(username:str , db: Session = Depends(get_db)):
                 existing_repo.readme = repo_readme
                 existing_repo.updated_at = updated_at_val
                 existing_repo.stars = repo.get("stargazers_count", 0)
+                existing_repo.homepage = repo.get("homepage")
+                existing_repo.size = repo.get("size", 0)
             else:
                 Rp = Repo(
                     Rid=repo_id,
@@ -251,6 +253,8 @@ async def store(username:str , db: Session = Depends(get_db)):
                     updated_at=updated_at_val,
                     owner_id=user.id,
                     stars=repo.get("stargazers_count", 0),
+                    homepage=repo.get("homepage"),
+                    size=repo.get("size", 0),
                 )
                 db.add(Rp)
 
@@ -359,8 +363,12 @@ def sort_repo(username:str,db:Session = Depends(get_db)):
             "name": repo.repo_name,
             "stargazers_count": repo.stars or 0,
             "forks_count": repo.forks or 0,
-            "size": 0,
+            "size": repo.size or 0,
             "language": repo.languages,
+            "description": repo.description,
+            "topics": repo.topics,
+            "homepage": repo.homepage,
+            "created_at": repo.created_at,
             "updated_at": repo.updated_at,
             "readme": repo.readme,
         }

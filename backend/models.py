@@ -17,6 +17,8 @@ class Repo(Base):
     updated_at = Column(String , nullable=False)
     readme = Column(String)
     stars = Column(Integer)
+    homepage = Column(String, nullable=True)
+    size = Column(Integer, nullable=True, default=0)
 
 class repositorySkill(Base):
     __tablename__ = "repository_skills"

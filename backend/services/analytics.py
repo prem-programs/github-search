@@ -1,3 +1,4 @@
+from services.commit_message import analyze_commit_quality
 import os
 import time
 import asyncio
@@ -49,11 +50,11 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
     # 1. Start user contributions fetch concurrently
     contributions_task = asyncio.create_task(get_user_contributions(username, token))
 
-    # 2. Fetch user profile and repositories
+    # 2. Fetch user profile, repositories, events, and PR data concurrently
     async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
-        # User details + repos
         user_req = client.get(f"https://api.github.com/users/{username}")
         repos_req = client.get(f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated")
+        events_req = client.get(f"https://api.github.com/users/{username}/events?per_page=100")
 
         # PR searches
         merged_pr_req = client.get(
@@ -78,6 +79,7 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
         results = await asyncio.gather(
             user_req,
             repos_req,
+            events_req,
             merged_pr_req,
             open_pr_req,
             closed_pr_req,
@@ -87,13 +89,38 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
             return_exceptions=True,
         )
 
+    (
+        user_res,
+        repos_res,
+        events_res,
+        merged_pr_res,
+        open_pr_res,
+        closed_pr_res,
+        ext_pr_res,
+        reviews_res,
+        comments_res,
+    ) = results
+
     # Process user profile
-    user_res = results[0]
     user_data = user_res.json() if isinstance(user_res, httpx.Response) and user_res.status_code == 200 else {}
 
     # Process repos
-    repos_res = results[1]
     repos = repos_res.json() if isinstance(repos_res, httpx.Response) and repos_res.status_code == 200 and isinstance(repos_res.json(), list) else []
+
+    # Process commit messages from PushEvents
+    commit_messages = []
+    if isinstance(events_res, httpx.Response) and events_res.status_code == 200:
+        events_data = events_res.json()
+        if isinstance(events_data, list):
+            for event in events_data:
+                if event.get("type") == "PushEvent":
+                    for commit in event.get("payload", {}).get("commits", []):
+                        msg = commit.get("message")
+                        if msg:
+                            commit_messages.append(msg)
+
+    # Analyze commit message quality using semantic embeddings
+    commit_quality = analyze_commit_quality(commit_messages)
 
     # Process PR search responses
     def get_search_count(res_obj, default=0):
@@ -101,17 +128,17 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
             return res_obj.json().get("total_count", default)
         return default
 
-    merged_prs = get_search_count(results[2], 0)
-    open_prs = get_search_count(results[3], 0)
-    closed_prs = get_search_count(results[4], 0)
-    ext_prs = get_search_count(results[5], 0)
-    reviews_count = get_search_count(results[6], 0)
-    comments_count = get_search_count(results[7], 0)
+    merged_prs = get_search_count(merged_pr_res, 0)
+    open_prs = get_search_count(open_pr_res, 0)
+    closed_prs = get_search_count(closed_pr_res, 0)
+    ext_prs = get_search_count(ext_pr_res, 0)
+    reviews_count = get_search_count(reviews_res, 0)
+    comments_count = get_search_count(comments_res, 0)
 
     # Calculate review cycles and merge times from recent merged PRs
     merged_items = []
-    if isinstance(results[2], httpx.Response) and results[2].status_code == 200:
-        merged_items = results[2].json().get("items", [])
+    if isinstance(merged_pr_res, httpx.Response) and merged_pr_res.status_code == 200:
+        merged_items = merged_pr_res.json().get("items", [])
 
     avg_review_cycles = 1.4
     if merged_items:
@@ -143,7 +170,10 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
             avg_time_to_merge_str = f"{round(avg_sec / 86400, 1)}d"
     elif merged_prs == 0:
         avg_time_to_merge_str = "N/A"
+    
 
+
+    
     # Repository metrics
     total_repos = len(repos) or user_data.get("public_repos", 0)
     total_stars = sum(r.get("stargazers_count", 0) for r in repos)
@@ -317,13 +347,7 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
             "wikiOrDiscussions": wiki_or_discussions,
             "badgeTitle": collab_badge_title,
         },
-        "commitQuality": {
-            "descriptiveMessages": 82,
-            "conventionalCommits": 71,
-            "avgMessageLength": "52 chars",
-            "referencesIssues": 48,
-            "hygieneRating": "Above average commit hygiene",
-        },
+        "commitQuality": commit_quality,
     }
 
     set_cached_analytics(username, analytics_payload)

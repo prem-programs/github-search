@@ -223,7 +223,7 @@ async def fetch_developer_analytics(username: str, token: Optional[str] = None) 
     elif merged_prs > 0:
         pr_merge_rate = 100
     else:
-        pr_merge_rate = 85 if total_repos > 0 else 0
+        pr_merge_rate = 0 if total_repos > 0 else 0
 
     # Lines added estimation based on contributions and repository codebase
     approx_lines = max(12, int((total_contributions * 145 + total_repos * 1200) / 1000))

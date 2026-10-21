@@ -472,10 +472,10 @@ export const Modal: React.FC<ModalProps> = ({ onClose, user }) => {
                     <GitPullRequest className="w-3.5 h-3.5 text-purple-600" /> PR merge rate
                   </div>
                   <div className="text-xl font-bold text-slate-900 font-mono">
-                    {analytics?.coreMetrics?.prMergeRate != null ? `${analytics.coreMetrics.prMergeRate}%` : "91%"}
+                    {analytics?.coreMetrics?.prMergeRate != null ? `${analytics.coreMetrics.prMergeRate}%` : "0"}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">
-                    {analytics?.coreMetrics?.prMergeSubtitle ?? "42 of 46 merged"}
+                    {analytics?.coreMetrics?.prMergeSubtitle ?? "0 of 0 merged"}
                   </div>
                 </div>
 
